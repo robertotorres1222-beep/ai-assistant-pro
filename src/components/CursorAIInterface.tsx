@@ -8,20 +8,16 @@ import {
   Crown,
   Sparkles,
   Brain,
-  Zap,
-  ChevronDown,
   X,
   Menu,
-  Edit3,
   Trash2,
-  MoreHorizontal,
   Copy,
   ThumbsUp,
   ThumbsDown
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { aiService } from '../services/aiService'
-import { SecurityValidator, SecureStorage } from '../utils/security'
+import { SecureStorage } from '../utils/security'
 
 interface Message {
   id: string
