@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
-import CursorAIInterface from './components/CursorAIInterface'
+import EnhancedCursorAI from './components/EnhancedCursorAI'
 import { initializeSecurity } from './utils/security'
 import { useEffect } from 'react'
 import './App.css'
@@ -15,8 +15,8 @@ function App() {
     <Router>
       <div className="App">
         <Routes>
-          <Route path="/" element={<CursorAIInterface />} />
-          <Route path="/chat" element={<CursorAIInterface />} />
+          <Route path="/" element={<EnhancedCursorAI />} />
+          <Route path="/chat" element={<EnhancedCursorAI />} />
         </Routes>
         <Toaster 
           position="top-right"
