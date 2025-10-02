@@ -33,6 +33,7 @@ dist-ssr
 # Build outputs
 build/
 out/
+release/
 
 # Cache directories
 .cache/
@@ -49,3 +50,4 @@ Desktop.ini
 *.tmp
 *.temp
 .vercel
+.env*.local
