@@ -15,30 +15,15 @@ import {
   ThumbsUp,
   ThumbsDown,
   Search,
-  Upload,
   Download,
   RefreshCw,
   Edit,
-  Code,
-  Image as ImageIcon,
-  FileText,
   Paperclip,
-  MoreVertical,
-  Zap,
   Sliders,
   Keyboard,
-  Share,
-  Archive,
   Star,
   Bookmark,
-  ChevronRight,
-  ChevronDown,
-  Play,
-  Pause,
-  Volume2,
-  VolumeX,
-  Maximize2,
-  Minimize2
+  Volume2
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { aiService } from '../services/aiService'
@@ -460,7 +445,7 @@ Ready to experience the **most advanced AI interface** ever built? 🚀`,
 
   const formatCode = (content: string) => {
     return content
-      .replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+      .replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => {
         return `<div class="bg-gray-900 rounded-lg p-4 my-4 overflow-x-auto">
           <div class="flex items-center justify-between mb-2">
             <span class="text-xs text-gray-400">${lang || 'code'}</span>
