@@ -1,18 +1,5 @@
 {
-  "version": 2,
-  "name": "ai-assistant-pro",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "installCommand": "npm install",
-  "framework": "vite",
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
-  ],
-  "env": {
-    "VITE_APP_NAME": "AI Assistant Pro",
-    "VITE_APP_VERSION": "2.0.0"
-  }
+  "installCommand": "npm install"
 }
