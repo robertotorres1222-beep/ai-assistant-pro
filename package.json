@@ -20,6 +20,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "vercel-build": "npm run build",
+    "build-static": "npm run build",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",
     "preview": "vite preview",
