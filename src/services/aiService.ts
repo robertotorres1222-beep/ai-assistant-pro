@@ -48,6 +48,7 @@ class AIService {
     if (import.meta.env.VITE_ANTHROPIC_API_KEY) {
       this.anthropic = new Anthropic({
         apiKey: import.meta.env.VITE_ANTHROPIC_API_KEY,
+        dangerouslyAllowBrowser: true // Only for demo - use backend in production
       })
     }
 
