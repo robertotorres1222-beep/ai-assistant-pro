@@ -324,7 +324,7 @@ Ready to experience the **most advanced AI interface** ever built? 🚀`,
         content: msg.content
       }))
 
-      const response = await aiService.chat(aiMessages, selectedModel)
+      const response = await aiService.chat(aiMessages, selectedModel, apiKeys[selectedProvider])
       
       const updatedMessage = {
         ...currentSession.messages[messageIndex],
@@ -395,7 +395,7 @@ Ready to experience the **most advanced AI interface** ever built? 🚀`,
 
       aiMessages.push({ role: 'user', content: userMessage.content })
 
-      const response = await aiService.chat(aiMessages, selectedModel)
+      const response = await aiService.chat(aiMessages, selectedModel, apiKeys[selectedProvider])
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),

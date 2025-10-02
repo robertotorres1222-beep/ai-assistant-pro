@@ -1,0 +1,22 @@
+{
+  "name": "ai-assistant-pro-backend",
+  "type": "web",
+  "plan": "free",
+  "buildCommand": "npm install",
+  "startCommand": "npm start",
+  "healthCheckPath": "/api/health",
+  "envVars": [
+    {
+      "key": "NODE_ENV",
+      "value": "production"
+    },
+    {
+      "key": "PORT", 
+      "value": "3001"
+    },
+    {
+      "key": "ALLOWED_ORIGINS",
+      "value": "https://ai-assistant-c7ktnvjxz-robertotos-projects.vercel.app"
+    }
+  ]
+}

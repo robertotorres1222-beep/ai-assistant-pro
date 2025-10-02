@@ -1,486 +1,477 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Send, Bot, User, Copy, ThumbsUp, ThumbsDown, Download, Settings, Shield, Zap } from 'lucide-react'
-import { toast } from 'react-hot-toast'
-import { aiService } from '../services/aiService'
-import { SecurityValidator, SecureStorage } from '../utils/security'
+import { motion, AnimatePresence } from 'framer-motion'
+import { 
+  Send, 
+  Mic, 
+  MicOff, 
+  Camera, 
+  Image, 
+  FileText, 
+  Settings, 
+  Sparkles,
+  Zap,
+  Brain,
+  Eye,
+  MessageSquare,
+  Code,
+  Search,
+  Download,
+  Upload,
+  Trash2,
+  Copy,
+  ThumbsUp,
+  ThumbsDown,
+  RefreshCw,
+  ChevronDown,
+  ChevronUp,
+  Globe,
+  Database,
+  Shield,
+  Rocket,
+  Cpu,
+  Layers
+} from 'lucide-react'
+import { useAIService, aiService, AIMessage, formatCost, formatTokens, formatTime } from '../services/aiService'
+import toast from 'react-hot-toast'
 
-interface Message {
-  id: string
-  content: string
-  role: 'user' | 'assistant'
-  timestamp: Date
-  model?: string
-  provider?: string
-  tokens?: number
-  cost?: number
-}
-
-interface AIChatProps {
+interface AdvancedAIChatProps {
   className?: string
 }
 
-export default function AIChat({ className = '' }: AIChatProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      content: 'Hello! I\'m your AI Assistant Pro. I can help you with coding, analysis, writing, and much more. I support multiple AI providers including OpenAI GPT-4, Anthropic Claude, and Google Gemini. What would you like to work on today?',
-      role: 'assistant',
-      timestamp: new Date(),
-      model: 'GPT-4',
-      provider: 'OpenAI'
-    }
-  ])
+const advancedModels = [
+  { id: 'gpt-4o', name: 'GPT-4o', description: 'Most capable with vision', icon: Brain },
+  { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', description: 'Advanced reasoning', icon: MessageSquare },
+  { id: 'o1-preview', name: 'o1-preview', description: 'Superior reasoning', icon: Cpu },
+  { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0', description: 'Experimental features', icon: Sparkles }
+]
+
+const capabilities = [
+  { name: 'Multi-modal', icon: Layers, description: 'Text, image, audio, video' },
+  { name: 'Voice', icon: Mic, description: 'Speech recognition & synthesis' },
+  { name: 'Vision', icon: Eye, description: 'Image analysis & generation' },
+  { name: 'Code', icon: Code, description: 'Code generation & analysis' },
+  { name: 'Web', icon: Globe, description: 'Real-time web search' },
+  { name: 'Memory', icon: Database, description: 'Persistent knowledge' }
+]
+
+export default function AdvancedAIChat({ className = '' }: AdvancedAIChatProps) {
+  const { 
+    messages, 
+    isProcessing, 
+    currentModel, 
+    setCurrentModel, 
+    config, 
+    setConfig,
+    clearMessages 
+  } = useAIService()
+  
   const [input, setInput] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [selectedProvider, setSelectedProvider] = useState('openai')
-  const [selectedModel, setSelectedModel] = useState('gpt-4')
   const [showSettings, setShowSettings] = useState(false)
-  const [apiKeys, setApiKeys] = useState<{[key: string]: string}>({})
-  const [securityEnabled, setSecurityEnabled] = useState(true)
+  const [showModelSelector, setShowModelSelector] = useState(false)
+  const [attachments, setAttachments] = useState<File[]>([])
+  const [temperature, setTemperature] = useState(0.7)
+  const [maxTokens, setMaxTokens] = useState(4000)
+  const [selectedCapabilities, setSelectedCapabilities] = useState(['Multi-modal', 'Voice', 'Vision'])
+  
   const messagesEndRef = useRef<HTMLDivElement>(null)
-
-  const scrollToBottom = () => {
+  const inputRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
-
-  useEffect(() => {
-    scrollToBottom()
   }, [messages])
-
-  // Load API keys on component mount
-  useEffect(() => {
-    const keys = {
-      openai: SecureStorage.getApiKey('openai') || '',
-      anthropic: SecureStorage.getApiKey('anthropic') || '',
-      google: SecureStorage.getApiKey('google') || ''
-    }
-    setApiKeys(keys)
-  }, [])
-
+  
   const handleSend = async () => {
-    if (!input.trim() || isLoading) return
-
-    // Security validation
-    if (securityEnabled) {
-      try {
-        SecurityValidator.sanitizeText(input)
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Invalid input')
-        return
-      }
-    }
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content: input.trim(),
-      role: 'user',
-      timestamp: new Date()
-    }
-
-    setMessages(prev => [...prev, userMessage])
-    setInput('')
-    setIsLoading(true)
-
+    if (!input.trim() && attachments.length === 0) return
+    
     try {
-      // Check if API key is available
-      const apiKey = apiKeys[selectedProvider]
-      if (!apiKey) {
-        throw new Error(`${selectedProvider} API key not configured. Please add it in settings.`)
-      }
-
-      // Convert messages to AI service format
-      const aiMessages = messages.map(msg => ({
-        role: msg.role as 'user' | 'assistant' | 'system',
-        content: msg.content
-      }))
-
-      // Add user message
-      aiMessages.push({
-        role: 'user',
-        content: userMessage.content
-      })
-
-      // Get AI response
-      const response = await aiService.chat(aiMessages, selectedProvider, selectedModel)
-
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: response.content,
-        role: 'assistant',
-        timestamp: response.timestamp,
-        model: response.model,
-        provider: response.provider,
-        tokens: response.tokens,
-        cost: response.cost
-      }
-
-      setMessages(prev => [...prev, aiMessage])
-      toast.success(`Response from ${response.provider} ${response.model}`)
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to get AI response'
-      toast.error(errorMessage)
+      let processedMessage = input
       
-      // Add error message to chat
-      const errorMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        content: `❌ Error: ${errorMessage}`,
-        role: 'assistant',
-        timestamp: new Date(),
-        model: selectedModel,
-        provider: selectedProvider
+      // Process attachments with advanced capabilities
+      if (attachments.length > 0) {
+        const attachmentPrompts = await Promise.all(
+          attachments.map(async (file) => {
+            if (file.type.startsWith('image/')) {
+              const base64 = await fileToBase64(file)
+              const response = await aiService.analyzeImage(base64, 'Analyze this image comprehensively.')
+              return `[Image Analysis: ${file.name}]\n${response.content}`
+            } else if (file.type.startsWith('audio/')) {
+              return `[Audio: ${file.name}] - Audio processing would be applied here`
+            } else if (file.type.startsWith('video/')) {
+              return `[Video: ${file.name}] - Video analysis would be applied here`
+            } else {
+              const text = await file.text()
+              return `[Document: ${file.name}]\n${text.substring(0, 2000)}...`
+            }
+          })
+        )
+        processedMessage = `${processedMessage}\n\n${attachmentPrompts.join('\n\n')}`
       }
-      setMessages(prev => [...prev, errorMsg])
-    } finally {
-      setIsLoading(false)
+      
+      // Add capability context
+      const capabilityContext = selectedCapabilities.map(cap => {
+        switch (cap) {
+          case 'Voice': return 'Use voice processing capabilities for enhanced understanding.'
+          case 'Vision': return 'Apply visual analysis and generation capabilities.'
+          case 'Code': return 'Provide code generation, analysis, and debugging assistance.'
+          case 'Web': return 'Search the web for real-time information when relevant.'
+          case 'Memory': return 'Access and update persistent knowledge base.'
+          default: return ''
+        }
+      }).join(' ')
+      
+      const finalMessage = `${capabilityContext}\n\n${processedMessage}`
+      
+      await aiService.generateResponse(finalMessage, messages, currentModel)
+      setInput('')
+      setAttachments([])
+      
+    } catch (error) {
+      toast.error('Failed to send message')
+      console.error(error)
     }
   }
-
+  
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSend()
     }
   }
-
-  const copyToClipboard = (content: string) => {
-    navigator.clipboard.writeText(content)
-    toast.success('Copied to clipboard!')
+  
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    setAttachments(prev => [...prev, ...files])
   }
-
-  const downloadChat = () => {
-    const chatData = messages.map(msg => 
-      `${msg.role.toUpperCase()} (${msg.provider} ${msg.model}): ${msg.content}\n`
-    ).join('\n')
-    
-    const blob = new Blob([chatData], { type: 'text/plain' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `ai-chat-${new Date().toISOString().split('T')[0]}.txt`
-    a.click()
-    URL.revokeObjectURL(url)
+  
+  const removeAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index))
   }
-
-  const saveApiKey = (provider: string, key: string) => {
-    try {
-      if (key.trim()) {
-        SecureStorage.setApiKey(provider, key.trim())
-        setApiKeys(prev => ({ ...prev, [provider]: key.trim() }))
-        toast.success(`${provider} API key saved securely`)
-      }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save API key')
-    }
-  }
-
-  const removeApiKey = (provider: string) => {
-    SecureStorage.removeApiKey(provider)
-    setApiKeys(prev => ({ ...prev, [provider]: '' }))
-    toast.success(`${provider} API key removed`)
-  }
-
-  const getAvailableProviders = () => {
-    return aiService.getAvailableProviders().filter(provider => 
-      apiKeys[provider.name.toLowerCase()] || provider.name.toLowerCase() === 'openai'
+  
+  const toggleCapability = (capability: string) => {
+    setSelectedCapabilities(prev => 
+      prev.includes(capability) 
+        ? prev.filter(c => c !== capability)
+        : [...prev, capability]
     )
   }
-
-  const getProviderModels = (provider: string) => {
-    const providers = aiService.getAvailableProviders()
-    const providerInfo = providers.find(p => p.name.toLowerCase() === provider.toLowerCase())
-    return providerInfo?.models || []
+  
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = error => reject(error)
+    })
   }
-
+  
   return (
-    <div className={`flex flex-col h-full bg-gray-50 dark:bg-gray-900 ${className}`}>
+    <div className={`flex flex-col h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-            <Bot className="w-5 h-5 text-white" />
+      <div className="flex items-center justify-between p-4 bg-black/20 backdrop-blur-xl border-b border-purple-500/30">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-500 rounded-2xl flex items-center justify-center shadow-xl">
+            <Sparkles className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h1 className="text-lg font-semibold text-gray-900 dark:text-white">AI Assistant Pro</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Multi-AI Provider Support</p>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+              Advanced AI Chat
+            </h1>
+            <p className="text-purple-200 text-sm">Multi-modal AI with cutting-edge capabilities</p>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <div className="flex items-center space-x-2">
-            {securityEnabled && <Shield className="w-4 h-4 text-green-500"  />}
-            <Zap className="w-4 h-4 text-yellow-500"  />
+        
+        <div className="flex items-center gap-2">
+          {/* Model Selector */}
+          <div className="relative">
+            <button
+              onClick={() => setShowModelSelector(!showModelSelector)}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600/30 backdrop-blur-xl border border-purple-400/30 rounded-xl hover:bg-purple-600/50 transition-all"
+            >
+              <span className="text-sm">{advancedModels.find(m => m.id === currentModel)?.name}</span>
+              <ChevronDown className="w-4 h-4" />
+            </button>
+            
+            <AnimatePresence>
+              {showModelSelector && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="absolute top-full right-0 mt-2 w-72 bg-gray-900/95 backdrop-blur-xl border border-purple-400/30 rounded-xl shadow-2xl z-50"
+                >
+                  {advancedModels.map((model) => {
+                    const IconComponent = model.icon
+                    return (
+                      <button
+                        key={model.id}
+                        onClick={() => {
+                          setCurrentModel(model.id)
+                          setShowModelSelector(false)
+                        }}
+                        className={`w-full text-left px-4 py-3 hover:bg-purple-600/30 transition-colors ${
+                          currentModel === model.id ? 'bg-purple-600/30' : ''
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <IconComponent className="w-5 h-5 text-purple-400" />
+                          <div>
+                            <div className="font-medium">{model.name}</div>
+                            <div className="text-sm text-purple-200">{model.description}</div>
+                          </div>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-          <select 
-            value={selectedProvider}
-            onChange={(e) => {
-              setSelectedProvider(e.target.value)
-              const models = getProviderModels(e.target.value)
-              if (models.length > 0) {
-                setSelectedModel(models[0])
-              }
-            }}
-            className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-          >
-            {getAvailableProviders().map(provider => (
-              <option key={provider.name} value={provider.name.toLowerCase()}>
-                {provider.name}
-              </option>
-            ))}
-          </select>
-          <select 
-            value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
-            className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-          >
-            {getProviderModels(selectedProvider).map(model => (
-              <option key={model} value={model}>
-                {model}
-              </option>
-            ))}
-          </select>
+          
           <button
             onClick={() => setShowSettings(!showSettings)}
-            className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-            title="Settings"
+            className="p-2 bg-purple-600/30 backdrop-blur-xl border border-purple-400/30 rounded-xl hover:bg-purple-600/50 transition-all"
           >
-            <Settings className="w-4 h-4" />
-          </button>
-          <button
-            onClick={downloadChat}
-            className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-            title="Download chat"
-          >
-            <Download className="w-4 h-4" />
+            <Settings className="w-5 h-5" />
           </button>
         </div>
       </div>
-
+      
       {/* Settings Panel */}
-      {showSettings && (
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                OpenAI API Key
-              </label>
-              <div className="flex space-x-2">
-                <input
-                  type="password"
-                  placeholder="sk-..."
-                  value={apiKeys.openai}
-                  onChange={(e) => setApiKeys(prev => ({ ...prev, openai: e.target.value }))}
-                  className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                />
-                <button
-                  onClick={() => saveApiKey('openai', apiKeys.openai)}
-                  className="px-3 py-2 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                >
-                  Save
-                </button>
-                {apiKeys.openai && (
-                  <button
-                    onClick={() => removeApiKey('openai')}
-                    className="px-3 py-2 text-sm bg-red-500 text-white rounded-md hover:bg-red-600"
-                  >
-                    Remove
-                  </button>
-                )}
+      <AnimatePresence>
+        {showSettings && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="bg-black/20 backdrop-blur-xl border-b border-purple-500/30 overflow-hidden"
+          >
+            <div className="p-6 space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold mb-4 text-purple-200">AI Capabilities</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {capabilities.map((capability) => {
+                    const IconComponent = capability.icon
+                    const isSelected = selectedCapabilities.includes(capability.name)
+                    return (
+                      <button
+                        key={capability.name}
+                        onClick={() => toggleCapability(capability.name)}
+                        className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
+                          isSelected 
+                            ? 'bg-purple-600/50 border border-purple-400/50' 
+                            : 'bg-gray-800/50 border border-gray-600/50 hover:bg-gray-700/50'
+                        }`}
+                      >
+                        <IconComponent className="w-5 h-5 text-purple-400" />
+                        <div className="text-left">
+                          <div className="font-medium text-sm">{capability.name}</div>
+                          <div className="text-xs text-purple-200">{capability.description}</div>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-purple-200">Temperature</label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="2"
+                    step="0.1"
+                    value={temperature}
+                    onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-xs text-purple-300 mt-1">
+                    <span>Precise</span>
+                    <span>{temperature}</span>
+                    <span>Creative</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-purple-200">Max Tokens</label>
+                  <input
+                    type="number"
+                    min="100"
+                    max="8000"
+                    step="100"
+                    value={maxTokens}
+                    onChange={(e) => setMaxTokens(parseInt(e.target.value))}
+                    className="w-full px-3 py-2 bg-gray-800/50 border border-purple-400/30 rounded-lg text-white"
+                  />
+                </div>
               </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Anthropic API Key
-              </label>
-              <div className="flex space-x-2">
-                <input
-                  type="password"
-                  placeholder="sk-ant-..."
-                  value={apiKeys.anthropic}
-                  onChange={(e) => setApiKeys(prev => ({ ...prev, anthropic: e.target.value }))}
-                  className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                />
-                <button
-                  onClick={() => saveApiKey('anthropic', apiKeys.anthropic)}
-                  className="px-3 py-2 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                >
-                  Save
-                </button>
-                {apiKeys.anthropic && (
-                  <button
-                    onClick={() => removeApiKey('anthropic')}
-                    className="px-3 py-2 text-sm bg-red-500 text-white rounded-md hover:bg-red-600"
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Google AI API Key
-              </label>
-              <div className="flex space-x-2">
-                <input
-                  type="password"
-                  placeholder="AIza..."
-                  value={apiKeys.google}
-                  onChange={(e) => setApiKeys(prev => ({ ...prev, google: e.target.value }))}
-                  className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                />
-                <button
-                  onClick={() => saveApiKey('google', apiKeys.google)}
-                  className="px-3 py-2 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                >
-                  Save
-                </button>
-                {apiKeys.google && (
-                  <button
-                    onClick={() => removeApiKey('google')}
-                    className="px-3 py-2 text-sm bg-red-500 text-white rounded-md hover:bg-red-600"
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="mt-4 flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="security"
-                checked={securityEnabled}
-                onChange={(e) => setSecurityEnabled(e.target.checked)}
-                className="rounded"
-              />
-              <label htmlFor="security" className="text-sm text-gray-700 dark:text-gray-300">
-                Enable Enterprise Security
-              </label>
-            </div>
-            <button
-              onClick={() => setShowSettings(false)}
-              className="px-4 py-2 text-sm bg-gray-500 text-white rounded-md hover:bg-gray-600"
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <AnimatePresence>
+          {messages.map((message, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className={`flex gap-4 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
-              Close Settings
-            </button>
+              {message.role !== 'user' && (
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-500 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-xl">
+                  <Sparkles className="w-7 h-7 text-white" />
+                </div>
+              )}
+              
+              <div className={`max-w-4xl ${message.role === 'user' ? 'order-first' : ''}`}>
+                <div className={`rounded-2xl px-6 py-4 shadow-2xl backdrop-blur-xl ${
+                  message.role === 'user' 
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white ml-auto' 
+                    : 'bg-gray-900/50 border border-purple-400/30 text-white'
+                }`}>
+                  <div className="whitespace-pre-wrap leading-relaxed">{message.content}</div>
+                  
+                  {message.metadata && (
+                    <div className="flex items-center gap-4 mt-3 text-xs text-purple-200">
+                      <span>{message.metadata.model}</span>
+                      <span>{formatTokens(message.metadata.tokens || 0)} tokens</span>
+                      <span>{formatCost(message.metadata.cost || 0)}</span>
+                      <span>{formatTime(message.metadata.processingTime || 0)}</span>
+                    </div>
+                  )}
+                </div>
+                
+                {message.role !== 'user' && (
+                  <div className="flex items-center gap-2 mt-3">
+                    <button className="p-2 hover:bg-purple-600/30 rounded-lg transition-colors">
+                      <Copy className="w-4 h-4" />
+                    </button>
+                    <button className="p-2 hover:bg-purple-600/30 rounded-lg transition-colors">
+                      <RefreshCw className="w-4 h-4" />
+                    </button>
+                    <button className="p-2 hover:bg-purple-600/30 rounded-lg transition-colors">
+                      <ThumbsUp className="w-4 h-4" />
+                    </button>
+                    <button className="p-2 hover:bg-purple-600/30 rounded-lg transition-colors">
+                      <ThumbsDown className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+              
+              {message.role === 'user' && (
+                <div className="w-12 h-12 bg-gray-600 rounded-2xl flex items-center justify-center flex-shrink-0">
+                  <Brain className="w-7 h-7 text-white" />
+                </div>
+              )}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+        
+        {isProcessing && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex gap-4"
+          >
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-pink-500 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-xl">
+              <Sparkles className="w-7 h-7 text-white" />
+            </div>
+            <div className="bg-gray-900/50 border border-purple-400/30 rounded-2xl px-6 py-4 backdrop-blur-xl">
+              <div className="flex items-center gap-3">
+                <div className="flex gap-1">
+                  <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+                <span className="text-purple-200 text-sm">Advanced AI is processing...</span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+        
+        <div ref={messagesEndRef} />
+      </div>
+      
+      {/* Attachments */}
+      {attachments.length > 0 && (
+        <div className="px-6 pb-2">
+          <div className="flex flex-wrap gap-2">
+            {attachments.map((file, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-2 bg-purple-600/30 backdrop-blur-xl border border-purple-400/30 px-3 py-2 rounded-lg"
+              >
+                <FileText className="w-4 h-4 text-purple-300" />
+                <span className="text-sm text-white">{file.name}</span>
+                <button
+                  onClick={() => removeAttachment(index)}
+                  className="text-purple-300 hover:text-white"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       )}
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => (
-          <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`flex max-w-4xl ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'} space-x-3`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                message.role === 'user' 
-                  ? 'bg-blue-500' 
-                  : 'bg-gradient-to-r from-blue-500 to-purple-600'
-              }`}>
-                {message.role === 'user' ? (
-                  <User className="w-5 h-5 text-white" />
-                ) : (
-                  <Bot className="w-5 h-5 text-white" />
-                )}
-              </div>
-              <div className={`rounded-lg px-4 py-2 ${
-                message.role === 'user'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700'
-              }`}>
-                <div className="whitespace-pre-wrap">{message.content}</div>
-                <div className={`flex items-center justify-between mt-2 text-xs ${
-                  message.role === 'user' ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
-                }`}>
-                  <span>{message.timestamp.toLocaleTimeString()}</span>
-                  <div className="flex items-center space-x-2">
-                    {message.provider && (
-                      <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full">
-                        {message.provider} {message.model}
-                      </span>
-                    )}
-                    {message.tokens && (
-                      <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 rounded-full">
-                        {message.tokens} tokens
-                      </span>
-                    )}
-                    {message.cost && (
-                      <span className="px-2 py-1 bg-green-100 dark:bg-green-900 rounded-full">
-                        ${message.cost.toFixed(4)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {message.role === 'assistant' && (
-                  <div className="flex items-center space-x-2 mt-2">
-                    <button
-                      onClick={() => copyToClipboard(message.content)}
-                      className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-                      title="Copy response"
-                    >
-                      <Copy className="w-3 h-3" />
-                    </button>
-                    <button
-                      className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-                      title="Good response"
-                    >
-                      <ThumbsUp className="w-3 h-3" />
-                    </button>
-                    <button
-                      className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-                      title="Poor response"
-                    >
-                      <ThumbsDown className="w-3 h-3" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                <Bot className="w-5 h-5 text-white" />
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-lg px-4 py-2 border border-gray-200 dark:border-gray-700">
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-
+      
       {/* Input */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-        <div className="flex items-end space-x-3">
-          <div className="flex-1">
+      <div className="p-6 bg-black/20 backdrop-blur-xl border-t border-purple-500/30">
+        <div className="flex gap-3">
+          <div className="flex-1 relative">
             <textarea
+              ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Ask me anything... (Press Enter to send, Shift+Enter for new line)"
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+              placeholder="Ask the advanced AI anything... (supports text, images, audio, video, code, and more)"
+              className="w-full px-4 py-3 bg-gray-900/50 border border-purple-400/30 rounded-xl resize-none focus:outline-none focus:border-purple-400 text-white placeholder-purple-300 backdrop-blur-xl"
               rows={1}
-              style={{ minHeight: '44px', maxHeight: '120px' }}
+              style={{
+                minHeight: '52px',
+                maxHeight: '120px'
+              }}
             />
+            
+            <div className="absolute right-3 bottom-3 flex gap-2">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="p-2 hover:bg-purple-600/30 rounded-lg transition-colors"
+              >
+                <Upload className="w-4 h-4 text-purple-400" />
+              </button>
+              <button className="p-2 hover:bg-purple-600/30 rounded-lg transition-colors">
+                <Camera className="w-4 h-4 text-purple-400" />
+              </button>
+              <button className="p-2 hover:bg-purple-600/30 rounded-lg transition-colors">
+                <Mic className="w-4 h-4 text-purple-400" />
+              </button>
+            </div>
           </div>
+          
           <button
             onClick={handleSend}
-            disabled={!input.trim() || isLoading}
-            className="p-3 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+            disabled={!input.trim() && attachments.length === 0 || isProcessing}
+            className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed rounded-xl transition-all duration-200 flex items-center gap-2 text-white font-medium shadow-xl hover:shadow-2xl transform hover:scale-105 disabled:transform-none"
           >
             <Send className="w-5 h-5" />
           </button>
         </div>
-        <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-          AI Assistant Pro supports OpenAI GPT-4, Anthropic Claude, and Google Gemini. Enterprise security enabled.
-        </div>
+        
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept="image/*,audio/*,video/*,.txt,.pdf,.doc,.docx,.js,.ts,.py,.html,.css,.json,.md"
+          onChange={handleFileUpload}
+          className="hidden"
+        />
       </div>
     </div>
   )

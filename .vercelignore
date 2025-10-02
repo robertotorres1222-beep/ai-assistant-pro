@@ -1,0 +1,12 @@
+node_modules
+release
+backend
+electron
+*.log
+.env
+.env.local
+.git
+.DS_Store
+*.md
+*.bat
+*.txt

@@ -161,7 +161,7 @@ How can I assist you today?`,
       }))
       aiMessages.push({ role: 'user', content: userMessage.content })
 
-      const response = await aiService.chat(aiMessages, selectedModel)
+      const response = await aiService.chat(aiMessages, selectedModel, apiKey)
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),

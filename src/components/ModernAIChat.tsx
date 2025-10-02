@@ -176,7 +176,7 @@ Ready to experience the **next generation** of AI assistance? 🚀`,
       aiMessages.push({ role: 'user', content: userMessage.content })
 
       // Use streamingEnabled for future streaming implementation
-      const response = await aiService.chat(aiMessages, selectedModel)
+      const response = await aiService.chat(aiMessages, selectedModel, apiKey)
       if (streamingEnabled) {
         // Streaming is enabled - could implement real-time streaming here
         console.log('Streaming enabled for response')

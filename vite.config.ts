@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -15,7 +16,7 @@ export default defineConfig({
       manifest: {
         name: 'AI Assistant Pro',
         short_name: 'AI Assistant Pro',
-        description: 'Professional AI assistant with advanced intelligence capabilities',
+        description: 'Professional AI assistant with Cursor and OpenAI interfaces',
         theme_color: '#1a1a1a',
         background_color: '#ffffff',
         display: 'standalone',
@@ -29,6 +30,17 @@ export default defineConfig({
       }
     })
   ],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+      '@components': path.resolve(__dirname, './src/components'),
+      '@services': path.resolve(__dirname, './src/services'),
+      '@utils': path.resolve(__dirname, './src/utils'),
+      '@types': path.resolve(__dirname, './src/types'),
+      '@hooks': path.resolve(__dirname, './src/hooks'),
+      '@assets': path.resolve(__dirname, './src/assets')
+    }
+  },
   base: '/',
   build: {
     outDir: 'dist',
@@ -39,7 +51,8 @@ export default defineConfig({
         manualChunks: {
           vendor: ['react', 'react-dom'],
           ui: ['framer-motion', 'lucide-react'],
-          markdown: ['react-markdown', 'remark-gfm', 'react-syntax-highlighter']
+          markdown: ['react-markdown', 'remark-gfm', 'react-syntax-highlighter'],
+          ai: ['openai', '@anthropic-ai/sdk', '@google/generative-ai']
         }
       }
     },
@@ -49,6 +62,13 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    open: true
+    open: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false
+      }
+    }
   }
 })

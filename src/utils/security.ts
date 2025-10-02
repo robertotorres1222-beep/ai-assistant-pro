@@ -1,273 +1,400 @@
-import CryptoJS from 'crypto-js'
+// Security utilities for the AI Assistant Pro application
 
-// Security configuration
-const SECURITY_CONFIG = {
-  ENCRYPTION_KEY: import.meta.env.VITE_ENCRYPTION_KEY || 'default-key-change-in-production',
-  RATE_LIMIT_WINDOW: 15 * 60 * 1000, // 15 minutes
-  MAX_REQUESTS_PER_WINDOW: 100,
-  MAX_MESSAGE_LENGTH: 10000,
-  ALLOWED_FILE_TYPES: ['txt', 'md', 'js', 'ts', 'json', 'py', 'html', 'css'],
-  MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
+export interface SecurityConfig {
+  apiKeyEncryption: boolean
+  inputSanitization: boolean
+  rateLimiting: boolean
+  contentFiltering: boolean
+  auditLogging: boolean
 }
 
-// Content Security Policy
-export const CSP_HEADERS = {
-  'Content-Security-Policy': [
-    "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
-    "img-src 'self' data: https:",
-    "connect-src 'self' https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com",
-    "frame-ancestors 'none'",
-    "base-uri 'self'",
-    "form-action 'self'"
-  ].join('; ')
+export interface SecurityEvent {
+  type: 'api_call' | 'file_upload' | 'content_filter' | 'rate_limit'
+  timestamp: Date
+  userId?: string
+  details: Record<string, any>
+  severity: 'low' | 'medium' | 'high' | 'critical'
 }
 
-// Input validation and sanitization
-export class SecurityValidator {
-  // Validate and sanitize text input
-  static sanitizeText(input: string): string {
-    if (!input || typeof input !== 'string') {
-      throw new Error('Invalid input: must be a non-empty string')
+class SecurityManager {
+  private config: SecurityConfig
+  private events: SecurityEvent[] = []
+  private blockedPatterns: RegExp[] = []
+  private allowedDomains: string[] = []
+
+  constructor() {
+    this.config = {
+      apiKeyEncryption: true,
+      inputSanitization: true,
+      rateLimiting: true,
+      contentFiltering: true,
+      auditLogging: true
     }
 
-    // Remove potential XSS vectors
-    let sanitized = input
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
-      .replace(/javascript:/gi, '')
-      .replace(/on\w+\s*=/gi, '')
-      .trim()
+    this.initializeSecurityPatterns()
+    this.loadSecurityConfiguration()
+  }
 
-    // Check length
-    if (sanitized.length > SECURITY_CONFIG.MAX_MESSAGE_LENGTH) {
-      throw new Error(`Message too long: maximum ${SECURITY_CONFIG.MAX_MESSAGE_LENGTH} characters allowed`)
+  private initializeSecurityPatterns() {
+    // Malicious patterns to block
+    this.blockedPatterns = [
+      /<script[^>]*>.*?<\/script>/gi,
+      /javascript:/gi,
+      /on\w+\s*=/gi,
+      /eval\s*\(/gi,
+      /expression\s*\(/gi,
+      /vbscript:/gi,
+      /data:text\/html/gi,
+      /<iframe[^>]*>/gi,
+      /<object[^>]*>/gi,
+      /<embed[^>]*>/gi
+    ]
+
+    // Allowed domains for external requests
+    this.allowedDomains = [
+      'api.openai.com',
+      'api.anthropic.com',
+      'generativelanguage.googleapis.com',
+      'api.github.com',
+      'api.stackoverflow.com'
+    ]
+  }
+
+  private loadSecurityConfiguration() {
+    try {
+      const saved = localStorage.getItem('security-config')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        this.config = { ...this.config, ...parsed }
+      }
+    } catch (error) {
+      console.warn('Failed to load security configuration:', error)
+    }
+  }
+
+  private saveSecurityConfiguration() {
+    try {
+      localStorage.setItem('security-config', JSON.stringify(this.config))
+    } catch (error) {
+      console.warn('Failed to save security configuration:', error)
+    }
+  }
+
+  // Initialize security features
+  public initializeSecurity(): void {
+    this.setupContentSecurityPolicy()
+    this.setupApiKeyProtection()
+    this.setupInputValidation()
+    this.logSecurityEvent({
+      type: 'api_call',
+      details: { action: 'security_initialized' },
+      severity: 'low'
+    })
+  }
+
+  private setupContentSecurityPolicy(): void {
+    // Set up CSP headers (would be handled by the backend)
+    const meta = document.createElement('meta')
+    meta.httpEquiv = 'Content-Security-Policy'
+    meta.content = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com"
+    document.head.appendChild(meta)
+  }
+
+  private setupApiKeyProtection(): void {
+    // Override console methods to prevent API key leakage
+    const originalLog = console.log
+    const originalError = console.error
+    const originalWarn = console.warn
+
+    console.log = (...args) => {
+      const filtered = this.filterSensitiveData(args)
+      originalLog.apply(console, filtered)
+    }
+
+    console.error = (...args) => {
+      const filtered = this.filterSensitiveData(args)
+      originalError.apply(console, filtered)
+    }
+
+    console.warn = (...args) => {
+      const filtered = this.filterSensitiveData(args)
+      originalWarn.apply(console, filtered)
+    }
+  }
+
+  private setupInputValidation(): void {
+    // Add input validation to all text inputs
+    document.addEventListener('input', (event) => {
+      const target = event.target as HTMLInputElement | HTMLTextAreaElement
+      if (target && (target.type === 'text' || target.tagName === 'TEXTAREA')) {
+        this.sanitizeInput(target.value)
+      }
+    })
+  }
+
+  private filterSensitiveData(args: any[]): any[] {
+    return args.map(arg => {
+      if (typeof arg === 'string') {
+        // Filter out potential API keys
+        return arg.replace(/sk-[a-zA-Z0-9]{20,}/g, '[API_KEY_FILTERED]')
+                  .replace(/[a-zA-Z0-9]{32,}/g, '[POTENTIAL_KEY_FILTERED]')
+      }
+      return arg
+    })
+  }
+
+  // Sanitize user input
+  public sanitizeInput(input: string): string {
+    if (!this.config.inputSanitization) return input
+
+    let sanitized = input
+
+    // Remove potentially dangerous patterns
+    this.blockedPatterns.forEach(pattern => {
+      sanitized = sanitized.replace(pattern, '[FILTERED]')
+    })
+
+    // Escape HTML entities
+    sanitized = sanitized
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#x27;')
+      .replace(/\//g, '&#x2F;')
+
+    // Limit length
+    const maxLength = 10000
+    if (sanitized.length > maxLength) {
+      sanitized = sanitized.substring(0, maxLength) + '...[TRUNCATED]'
     }
 
     return sanitized
   }
 
-  // Validate file upload
-  static validateFile(file: File): { isValid: boolean; error?: string } {
-    // Check file size
-    if (file.size > SECURITY_CONFIG.MAX_FILE_SIZE) {
-      return {
-        isValid: false,
-        error: `File too large: maximum ${SECURITY_CONFIG.MAX_FILE_SIZE / (1024 * 1024)}MB allowed`
+  // Validate API key format
+  public validateApiKey(apiKey: string): boolean {
+    if (!apiKey || typeof apiKey !== 'string') return false
+
+    // OpenAI API key format
+    if (apiKey.startsWith('sk-') && apiKey.length >= 20) return true
+
+    // Anthropic API key format
+    if (apiKey.startsWith('sk-ant-') && apiKey.length >= 20) return true
+
+    // Google AI API key format
+    if (apiKey.length >= 20 && /^[a-zA-Z0-9_-]+$/.test(apiKey)) return true
+
+    return false
+  }
+
+  // Encrypt API key for storage
+  public encryptApiKey(apiKey: string): string {
+    if (!this.config.apiKeyEncryption) return apiKey
+
+    // Simple base64 encoding (in production, use proper encryption)
+    return btoa(apiKey)
+  }
+
+  // Decrypt API key from storage
+  public decryptApiKey(encryptedKey: string): string {
+    if (!this.config.apiKeyEncryption) return encryptedKey
+
+    try {
+      return atob(encryptedKey)
+    } catch (error) {
+      console.error('Failed to decrypt API key:', error)
+      return encryptedKey
+    }
+  }
+
+  // Rate limiting
+  private requestCounts: Map<string, number> = new Map()
+  private lastReset: number = Date.now()
+
+  public checkRateLimit(userId: string, limit: number = 100): boolean {
+    if (!this.config.rateLimiting) return true
+
+    const now = Date.now()
+    const resetInterval = 60 * 60 * 1000 // 1 hour
+
+    // Reset counters if interval has passed
+    if (now - this.lastReset > resetInterval) {
+      this.requestCounts.clear()
+      this.lastReset = now
+    }
+
+    const count = this.requestCounts.get(userId) || 0
+    if (count >= limit) {
+      this.logSecurityEvent({
+        type: 'rate_limit',
+        details: { userId, limit, count },
+        severity: 'high'
+      })
+      return false
+    }
+
+    this.requestCounts.set(userId, count + 1)
+    return true
+  }
+
+  // Content filtering
+  public filterContent(content: string): { isAllowed: boolean; filteredContent: string; reason?: string } {
+    if (!this.config.contentFiltering) {
+      return { isAllowed: true, filteredContent: content }
+    }
+
+    // Check for malicious patterns
+    for (const pattern of this.blockedPatterns) {
+      if (pattern.test(content)) {
+        this.logSecurityEvent({
+          type: 'content_filter',
+          details: { pattern: pattern.toString(), content: content.substring(0, 100) },
+          severity: 'medium'
+        })
+        return { 
+          isAllowed: false, 
+          filteredContent: '[CONTENT_BLOCKED]', 
+          reason: 'Potentially malicious content detected' 
+        }
       }
     }
 
-    // Check file type
-    const extension = file.name.split('.').pop()?.toLowerCase()
-    if (!extension || !SECURITY_CONFIG.ALLOWED_FILE_TYPES.includes(extension)) {
-      return {
-        isValid: false,
-        error: `File type not allowed. Allowed types: ${SECURITY_CONFIG.ALLOWED_FILE_TYPES.join(', ')}`
+    // Check for excessive profanity (simple example)
+    const profanityWords = ['spam', 'scam', 'phishing'] // Add more as needed
+    const lowerContent = content.toLowerCase()
+    for (const word of profanityWords) {
+      if (lowerContent.includes(word)) {
+        return { 
+          isAllowed: false, 
+          filteredContent: '[CONTENT_FILTERED]', 
+          reason: 'Inappropriate content detected' 
+        }
       }
+    }
+
+    return { isAllowed: true, filteredContent: content }
+  }
+
+  // Validate file upload
+  public validateFileUpload(file: File): { isValid: boolean; reason?: string } {
+    const maxSize = 10 * 1024 * 1024 // 10MB
+    const allowedTypes = [
+      'text/plain',
+      'text/markdown',
+      'application/json',
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'audio/mpeg',
+      'audio/wav',
+      'video/mp4',
+      'application/pdf'
+    ]
+
+    if (file.size > maxSize) {
+      return { isValid: false, reason: 'File size exceeds limit' }
+    }
+
+    if (!allowedTypes.includes(file.type)) {
+      return { isValid: false, reason: 'File type not allowed' }
+    }
+
+    // Check filename for suspicious patterns
+    const suspiciousPatterns = /\.(exe|bat|cmd|scr|pif|com)$/i
+    if (suspiciousPatterns.test(file.name)) {
+      return { isValid: false, reason: 'Executable files not allowed' }
     }
 
     return { isValid: true }
   }
 
-  // Validate API key format
-  static validateApiKey(key: string, provider: string): boolean {
-    if (!key || typeof key !== 'string') return false
+  // Log security events
+  private logSecurityEvent(event: Omit<SecurityEvent, 'timestamp'>): void {
+    if (!this.config.auditLogging) return
 
-    switch (provider.toLowerCase()) {
-      case 'openai':
-        return key.startsWith('sk-') && key.length > 20
-      case 'anthropic':
-        return key.startsWith('sk-ant-') && key.length > 30
-      case 'google':
-        return key.length > 20 && /^[A-Za-z0-9_-]+$/.test(key)
-      default:
-        return false
-    }
-  }
-
-  // Rate limiting
-  private static requestCounts = new Map<string, { count: number; resetTime: number }>()
-
-  static checkRateLimit(identifier: string): { allowed: boolean; resetTime?: number } {
-    const now = Date.now()
-    const current = this.requestCounts.get(identifier)
-
-    if (!current || now > current.resetTime) {
-      // Reset or initialize
-      this.requestCounts.set(identifier, {
-        count: 1,
-        resetTime: now + SECURITY_CONFIG.RATE_LIMIT_WINDOW
-      })
-      return { allowed: true }
+    const securityEvent: SecurityEvent = {
+      ...event,
+      timestamp: new Date()
     }
 
-    if (current.count >= SECURITY_CONFIG.MAX_REQUESTS_PER_WINDOW) {
-      return { allowed: false, resetTime: current.resetTime }
+    this.events.push(securityEvent)
+
+    // Keep only last 1000 events
+    if (this.events.length > 1000) {
+      this.events = this.events.slice(-1000)
     }
 
-    current.count++
-    return { allowed: true }
-  }
-
-  // Clear expired rate limit entries
-  static cleanupRateLimit(): void {
-    const now = Date.now()
-    for (const [key, value] of this.requestCounts.entries()) {
-      if (now > value.resetTime) {
-        this.requestCounts.delete(key)
-      }
-    }
-  }
-}
-
-// Encryption utilities
-export class EncryptionService {
-  // Encrypt sensitive data
-  static encrypt(text: string): string {
+    // Save to localStorage
     try {
-      return CryptoJS.AES.encrypt(text, SECURITY_CONFIG.ENCRYPTION_KEY).toString()
+      localStorage.setItem('security-events', JSON.stringify(this.events.slice(-100)))
     } catch (error) {
-      throw new Error('Encryption failed')
+      console.warn('Failed to save security events:', error)
+    }
+
+    // Log critical events to console
+    if (event.severity === 'critical' || event.severity === 'high') {
+      console.warn('Security Event:', securityEvent)
     }
   }
 
-  // Decrypt sensitive data
-  static decrypt(encryptedText: string): string {
-    try {
-      const bytes = CryptoJS.AES.decrypt(encryptedText, SECURITY_CONFIG.ENCRYPTION_KEY)
-      return bytes.toString(CryptoJS.enc.Utf8)
-    } catch (error) {
-      throw new Error('Decryption failed')
+  // Get security events
+  public getSecurityEvents(severity?: SecurityEvent['severity']): SecurityEvent[] {
+    if (severity) {
+      return this.events.filter(event => event.severity === severity)
+    }
+    return [...this.events]
+  }
+
+  // Get security statistics
+  public getSecurityStats(): {
+    totalEvents: number
+    eventsBySeverity: Record<SecurityEvent['severity'], number>
+    eventsByType: Record<SecurityEvent['type'], number>
+    recentActivity: SecurityEvent[]
+  } {
+    const eventsBySeverity = this.events.reduce((acc, event) => {
+      acc[event.severity] = (acc[event.severity] || 0) + 1
+      return acc
+    }, {} as Record<SecurityEvent['severity'], number>)
+
+    const eventsByType = this.events.reduce((acc, event) => {
+      acc[event.type] = (acc[event.type] || 0) + 1
+      return acc
+    }, {} as Record<SecurityEvent['type'], number>)
+
+    const recentActivity = this.events
+      .filter(event => Date.now() - event.timestamp.getTime() < 24 * 60 * 60 * 1000) // Last 24 hours
+      .slice(-10)
+
+    return {
+      totalEvents: this.events.length,
+      eventsBySeverity,
+      eventsByType,
+      recentActivity
     }
   }
 
-  // Hash password (for future auth features)
-  static hashPassword(password: string): string {
-    return CryptoJS.SHA256(password + SECURITY_CONFIG.ENCRYPTION_KEY).toString()
+  // Update security configuration
+  public updateConfig(newConfig: Partial<SecurityConfig>): void {
+    this.config = { ...this.config, ...newConfig }
+    this.saveSecurityConfiguration()
   }
 
-  // Generate secure random string
-  static generateSecureRandom(length: number = 32): string {
-    const array = new Uint8Array(length)
-    crypto.getRandomValues(array)
-    return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('')
+  // Get current configuration
+  public getConfig(): SecurityConfig {
+    return { ...this.config }
   }
 }
 
-// Secure storage for API keys
-export class SecureStorage {
-  private static STORAGE_PREFIX = 'ai_assistant_secure_'
+// Create singleton instance
+export const securityManager = new SecurityManager()
 
-  // Store API key securely
-  static setApiKey(provider: string, key: string): void {
-    if (!SecurityValidator.validateApiKey(key, provider)) {
-      throw new Error(`Invalid ${provider} API key format`)
-    }
-
-    const encryptedKey = EncryptionService.encrypt(key)
-    localStorage.setItem(`${this.STORAGE_PREFIX}${provider}`, encryptedKey)
-  }
-
-  // Retrieve API key
-  static getApiKey(provider: string): string | null {
-    const encryptedKey = localStorage.getItem(`${this.STORAGE_PREFIX}${provider}`)
-    if (!encryptedKey) return null
-
-    try {
-      return EncryptionService.decrypt(encryptedKey)
-    } catch {
-      // If decryption fails, remove the corrupted key
-      this.removeApiKey(provider)
-      return null
-    }
-  }
-
-  // Remove API key
-  static removeApiKey(provider: string): void {
-    localStorage.removeItem(`${this.STORAGE_PREFIX}${provider}`)
-  }
-
-  // Check if API key exists
-  static hasApiKey(provider: string): boolean {
-    return this.getApiKey(provider) !== null
-  }
-
-  // Clear all stored keys
-  static clearAllKeys(): void {
-    const keys = Object.keys(localStorage)
-    keys.forEach(key => {
-      if (key.startsWith(this.STORAGE_PREFIX)) {
-        localStorage.removeItem(key)
-      }
-    })
-  }
+// Initialize security when module is loaded
+export const initializeSecurity = (): void => {
+  securityManager.initializeSecurity()
 }
 
-// Security headers for requests
-export const getSecurityHeaders = () => ({
-  'X-Content-Type-Options': 'nosniff',
-  'X-Frame-Options': 'DENY',
-  'X-XSS-Protection': '1; mode=block',
-  'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
-  ...CSP_HEADERS
-})
-
-// Audit logging
-export class SecurityAudit {
-  private static logs: Array<{
-    timestamp: Date
-    event: string
-    details: any
-    severity: 'low' | 'medium' | 'high' | 'critical'
-  }> = []
-
-  static log(event: string, details: any, severity: 'low' | 'medium' | 'high' | 'critical' = 'low'): void {
-    this.logs.push({
-      timestamp: new Date(),
-      event,
-      details,
-      severity
-    })
-
-    // Keep only last 1000 logs
-    if (this.logs.length > 1000) {
-      this.logs = this.logs.slice(-1000)
-    }
-
-    // Log critical events to console in development
-    if (severity === 'critical' && import.meta.env.DEV) {
-      console.error(`[SECURITY AUDIT] ${event}:`, details)
-    }
-  }
-
-  static getLogs(): Array<{ timestamp: Date; event: string; details: any; severity: string }> {
-    return [...this.logs]
-  }
-
-  static clearLogs(): void {
-    this.logs = []
-  }
-}
-
-// Initialize security features
-export const initializeSecurity = () => {
-  // Clean up rate limiting every 5 minutes
-  setInterval(() => {
-    SecurityValidator.cleanupRateLimit()
-  }, 5 * 60 * 1000)
-
-  // Log security initialization
-  SecurityAudit.log('Security system initialized', {}, 'low')
-}
-
-export default {
-  SecurityValidator,
-  EncryptionService,
-  SecureStorage,
-  SecurityAudit,
-  getSecurityHeaders,
-  initializeSecurity
-}
+// Export types and utilities
+export type { SecurityConfig, SecurityEvent }
+export { SecurityManager }

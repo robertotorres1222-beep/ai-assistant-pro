@@ -2,41 +2,27 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const { v4: uuidv4 } = require('uuid');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
-const winston = require('winston');
-
-// Import our custom AI intelligence services
-const IntelligenceEngine = require('./services/intelligenceEngine');
-const ToolsService = require('./services/toolsService');
-const KnowledgeBase = require('./services/knowledgeBase');
-const ReasoningEngine = require('./services/reasoningEngine');
-const CodeAnalysisService = require('./services/codeAnalysisService');
-const FileProcessingService = require('./services/fileProcessingService');
-const SecurityService = require('./services/securityService');
+const { OpenAI } = require('openai');
+const Anthropic = require('@anthropic-ai/sdk');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Configure logging
-const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.errors({ stack: true }),
-    winston.format.json()
-  ),
-  transports: [
-    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'logs/combined.log' }),
-    new winston.transports.Console({
-      format: winston.format.simple()
-    })
-  ]
-});
+// Initialize AI providers
+const openai = process.env.OPENAI_API_KEY ? new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+}) : null;
 
-// Security middleware
+const anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY
+}) : null;
+
+const google = process.env.GOOGLE_AI_API_KEY ? new GoogleGenerativeAI(
+  process.env.GOOGLE_AI_API_KEY
+) : null;
+
+// Middleware
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -45,435 +31,173 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://api.openai.com", "https://api.anthropic.com"]
+      connectSrc: ["'self'", "https://api.openai.com", "https://api.anthropic.com", "https://generativelanguage.googleapis.com"]
     }
   }
 }));
 
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000', 'https://ai-assistant-13sh6yauv-robertotos-projects.vercel.app'],
   credentials: true
 }));
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Rate limiting
-const createRateLimit = (windowMs, max, message) => rateLimit({
-  windowMs,
-  max,
-  message: { error: message, code: 'RATE_LIMIT_EXCEEDED' },
-  standardHeaders: true,
-  legacyHeaders: false,
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: { error: 'Too many requests from this IP, please try again later.' }
 });
+app.use('/api/', limiter);
 
-// Different rate limits for different tiers
-const freeTierLimit = createRateLimit(60 * 60 * 1000, 100, 'Free tier: 100 requests per hour exceeded');
-const proTierLimit = createRateLimit(60 * 60 * 1000, 1000, 'Pro tier: 1000 requests per hour exceeded');
-const enterpriseLimit = createRateLimit(60 * 60 * 1000, 10000, 'Enterprise tier: 10000 requests per hour exceeded');
-
-// Initialize services
-const intelligenceEngine = new IntelligenceEngine();
-const toolsService = new ToolsService();
-const knowledgeBase = new KnowledgeBase();
-const reasoningEngine = new ReasoningEngine();
-const codeAnalysisService = new CodeAnalysisService();
-const fileProcessingService = new FileProcessingService();
-const securityService = new SecurityService();
-
-// Authentication middleware
-const authenticateApiKey = async (req, res, next) => {
-  try {
-    const apiKey = req.headers['x-api-key'] || req.query.apiKey;
-    
-    if (!apiKey) {
-      return res.status(401).json({ 
-        error: 'API key required', 
-        code: 'INVALID_API_KEY' 
-      });
-    }
-
-    // Validate API key and get user info
-    const user = await securityService.validateApiKey(apiKey);
-    if (!user) {
-      return res.status(401).json({ 
-        error: 'Invalid API key', 
-        code: 'INVALID_API_KEY' 
-      });
-    }
-
-    req.user = user;
-    
-    // Apply appropriate rate limiting based on tier
-    let rateLimitMiddleware;
-    switch (user.tier) {
-      case 'enterprise':
-        rateLimitMiddleware = enterpriseLimit;
-        break;
-      case 'pro':
-        rateLimitMiddleware = proTierLimit;
-        break;
-      default:
-        rateLimitMiddleware = freeTierLimit;
-    }
-    
-    rateLimitMiddleware(req, res, next);
-  } catch (error) {
-    logger.error('Authentication error:', error);
-    res.status(500).json({ 
-      error: 'Authentication failed', 
-      code: 'AUTH_ERROR' 
-    });
-  }
-};
-
-// Logging middleware
-app.use((req, res, next) => {
-  logger.info(`${req.method} ${req.path}`, {
-    ip: req.ip,
-    userAgent: req.get('User-Agent'),
-    apiKey: req.headers['x-api-key']?.substring(0, 8) + '...'
-  });
-  next();
-});
-
-// Health check endpoint
+// Health check
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
     version: '1.0.0',
-    services: {
-      intelligence: intelligenceEngine.isHealthy(),
-      tools: toolsService.isHealthy(),
-      knowledge: knowledgeBase.isHealthy(),
-      reasoning: reasoningEngine.isHealthy()
+    providers: {
+      openai: !!openai,
+      anthropic: !!anthropic,
+      google: !!google
     }
   });
 });
 
-// Advanced AI Chat endpoint with custom intelligence
-app.post('/api/chat', authenticateApiKey, async (req, res) => {
+// Chat endpoint
+app.post('/api/chat', async (req, res) => {
   try {
-    const { message, context = [], tools_enabled = true, reasoning_mode = 'advanced' } = req.body;
-    
+    const { message, model = 'gpt-4o', provider = 'openai', context = [] } = req.body;
+
     if (!message || typeof message !== 'string') {
       return res.status(400).json({
-        error: 'Message is required and must be a string',
-        code: 'INVALID_REQUEST'
+        error: 'Message is required and must be a string'
       });
     }
 
-    // Security validation
-    const sanitizedMessage = securityService.sanitizeInput(message);
-    
-    // Start processing with our intelligence engine
-    const startTime = Date.now();
-    
-    // Step 1: Analyze the request with reasoning engine
-    const analysis = await reasoningEngine.analyzeRequest(sanitizedMessage, context);
-    
-    // Step 2: Determine if tools are needed
-    let toolResults = null;
-    if (tools_enabled && analysis.requiresTools) {
-      toolResults = await toolsService.executeTools(analysis.suggestedTools, sanitizedMessage);
+    let response;
+
+    switch (provider) {
+      case 'openai':
+        if (!openai) {
+          return res.status(400).json({ error: 'OpenAI API key not configured' });
+        }
+        response = await callOpenAI(message, context, model);
+        break;
+      
+      case 'anthropic':
+        if (!anthropic) {
+          return res.status(400).json({ error: 'Anthropic API key not configured' });
+        }
+        response = await callAnthropic(message, context, model);
+        break;
+      
+      case 'google':
+        if (!google) {
+          return res.status(400).json({ error: 'Google AI API key not configured' });
+        }
+        response = await callGoogle(message, context, model);
+        break;
+      
+      default:
+        return res.status(400).json({ error: 'Unsupported provider' });
     }
-    
-    // Step 3: Generate response with our custom intelligence
-    const response = await intelligenceEngine.generateResponse({
-      message: sanitizedMessage,
-      context,
-      analysis,
-      toolResults,
-      reasoningMode: reasoning_mode,
-      userPreferences: req.user.preferences
-    });
-    
-    const processingTime = Date.now() - startTime;
-    
-    // Log usage for billing
-    await securityService.logUsage(req.user.id, {
-      endpoint: 'chat',
-      tokens: response.tokens,
-      processingTime,
-      cost: response.cost
-    });
-    
+
     res.json({
       success: true,
       data: {
-        message: response.content,
-        reasoning: response.reasoning,
-        tools_used: toolResults?.toolsUsed || [],
-        confidence: response.confidence,
-        tokens: response.tokens,
-        cost: response.cost,
-        processing_time_ms: processingTime,
+        message: response,
+        model,
+        provider,
         timestamp: new Date().toISOString()
       }
     });
-    
+
   } catch (error) {
-    logger.error('Chat endpoint error:', error);
+    console.error('Chat error:', error);
     res.status(500).json({
       error: 'Failed to process chat request',
-      code: 'PROCESSING_ERROR',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      details: error.message
     });
   }
 });
 
-// Advanced Code Analysis endpoint
-app.post('/api/analyze', authenticateApiKey, async (req, res) => {
-  try {
-    const { code, language, analysis_type = 'comprehensive' } = req.body;
-    
-    if (!code || !language) {
-      return res.status(400).json({
-        error: 'Code and language are required',
-        code: 'INVALID_REQUEST'
-      });
-    }
+// OpenAI API call
+async function callOpenAI(message, context, model) {
+  const messages = [
+    ...context.map(msg => ({ role: msg.role, content: msg.content })),
+    { role: 'user', content: message }
+  ];
 
-    const startTime = Date.now();
-    
-    // Use our advanced code analysis service
-    const analysis = await codeAnalysisService.analyzeCode({
-      code: securityService.sanitizeInput(code),
-      language,
-      analysisType: analysis_type,
-      deepAnalysis: req.user.tier !== 'free' // Premium feature
-    });
-    
-    const processingTime = Date.now() - startTime;
-    
-    await securityService.logUsage(req.user.id, {
-      endpoint: 'analyze',
-      tokens: analysis.tokens,
-      processingTime,
-      cost: analysis.cost
-    });
-    
-    res.json({
-      success: true,
-      data: {
-        analysis: analysis.result,
-        suggestions: analysis.suggestions,
-        security_issues: analysis.securityIssues,
-        performance_insights: analysis.performanceInsights,
-        maintainability_score: analysis.maintainabilityScore,
-        complexity_analysis: analysis.complexityAnalysis,
-        language,
-        type: analysis_type,
-        tokens: analysis.tokens,
-        cost: analysis.cost,
-        processing_time_ms: processingTime,
-        timestamp: new Date().toISOString()
-      }
-    });
-    
-  } catch (error) {
-    logger.error('Code analysis error:', error);
-    res.status(500).json({
-      error: 'Failed to analyze code',
-      code: 'ANALYSIS_ERROR'
-    });
-  }
-});
+  const completion = await openai.chat.completions.create({
+    model,
+    messages,
+    temperature: 0.7,
+    max_tokens: 4000
+  });
 
-// Advanced File Processing endpoint
-app.post('/api/analyze-file', authenticateApiKey, async (req, res) => {
-  try {
-    const { file_content, file_name, file_type, analysis_depth = 'standard' } = req.body;
-    
-    if (!file_content || !file_name || !file_type) {
-      return res.status(400).json({
-        error: 'File content, name, and type are required',
-        code: 'INVALID_REQUEST'
-      });
-    }
+  return completion.choices[0]?.message?.content || 'No response generated';
+}
 
-    const startTime = Date.now();
-    
-    // Process file with our advanced service
-    const analysis = await fileProcessingService.processFile({
-      content: file_content,
-      fileName: file_name,
-      fileType: file_type,
-      analysisDepth: analysis_depth,
-      extractEntities: req.user.tier !== 'free',
-      generateSummary: true,
-      detectLanguage: true
-    });
-    
-    const processingTime = Date.now() - startTime;
-    
-    await securityService.logUsage(req.user.id, {
-      endpoint: 'analyze-file',
-      tokens: analysis.tokens,
-      processingTime,
-      cost: analysis.cost
-    });
-    
-    res.json({
-      success: true,
-      data: {
-        analysis: analysis.content,
-        summary: analysis.summary,
-        entities: analysis.entities,
-        key_insights: analysis.keyInsights,
-        language_detected: analysis.detectedLanguage,
-        file_name,
-        file_type,
-        tokens: analysis.tokens,
-        cost: analysis.cost,
-        processing_time_ms: processingTime,
-        timestamp: new Date().toISOString()
-      }
-    });
-    
-  } catch (error) {
-    logger.error('File analysis error:', error);
-    res.status(500).json({
-      error: 'Failed to analyze file',
-      code: 'FILE_ANALYSIS_ERROR'
-    });
-  }
-});
+// Anthropic API call
+async function callAnthropic(message, context, model) {
+  const conversation = context.map(msg => 
+    `${msg.role === 'user' ? 'Human' : 'Assistant'}: ${msg.content}`
+  ).join('\n\n');
+  
+  const fullPrompt = `${conversation}\n\nHuman: ${message}\n\nAssistant:`;
 
-// Knowledge Base Query endpoint
-app.post('/api/knowledge/query', authenticateApiKey, async (req, res) => {
-  try {
-    const { query, domain, max_results = 10 } = req.body;
-    
-    const results = await knowledgeBase.search({
-      query: securityService.sanitizeInput(query),
-      domain,
-      maxResults: max_results,
-      userContext: req.user.preferences
-    });
-    
-    res.json({
-      success: true,
-      data: {
-        results: results.items,
-        total_found: results.total,
-        query_time_ms: results.queryTime,
-        relevance_scores: results.relevanceScores
-      }
-    });
-    
-  } catch (error) {
-    logger.error('Knowledge query error:', error);
-    res.status(500).json({
-      error: 'Failed to query knowledge base',
-      code: 'KNOWLEDGE_ERROR'
-    });
-  }
-});
+  const response = await anthropic.messages.create({
+    model,
+    max_tokens: 4000,
+    messages: [{ role: 'user', content: fullPrompt }]
+  });
 
-// Tool Execution endpoint
-app.post('/api/tools/execute', authenticateApiKey, async (req, res) => {
-  try {
-    const { tool_name, parameters, context } = req.body;
-    
-    if (req.user.tier === 'free' && !toolsService.isToolFreeForUser(tool_name)) {
-      return res.status(403).json({
-        error: 'Tool requires paid subscription',
-        code: 'PREMIUM_FEATURE_REQUIRED'
-      });
-    }
-    
-    const result = await toolsService.executeTool({
-      toolName: tool_name,
-      parameters: securityService.sanitizeInput(parameters),
-      context,
-      userId: req.user.id
-    });
-    
-    res.json({
-      success: true,
-      data: result
-    });
-    
-  } catch (error) {
-    logger.error('Tool execution error:', error);
-    res.status(500).json({
-      error: 'Failed to execute tool',
-      code: 'TOOL_EXECUTION_ERROR'
-    });
-  }
-});
+  return response.content[0]?.text || 'No response generated';
+}
 
-// Usage Statistics endpoint
-app.get('/api/usage', authenticateApiKey, async (req, res) => {
-  try {
-    const { period = '30d' } = req.query;
-    
-    const stats = await securityService.getUsageStats(req.user.id, period);
-    
-    res.json({
-      success: true,
-      data: stats
-    });
-    
-  } catch (error) {
-    logger.error('Usage stats error:', error);
-    res.status(500).json({
-      error: 'Failed to get usage statistics',
-      code: 'STATS_ERROR'
-    });
-  }
-});
+// Google AI API call
+async function callGoogle(message, context, model) {
+  const conversation = context.map(msg => 
+    `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`
+  ).join('\n\n');
+  
+  const fullPrompt = `${conversation}\n\nUser: ${message}\n\nAssistant:`;
 
-// API Key Management endpoints
-app.get('/api/keys', authenticateApiKey, async (req, res) => {
-  try {
-    const keys = await securityService.getUserApiKeys(req.user.id);
-    res.json({ success: true, data: keys });
-  } catch (error) {
-    logger.error('Get API keys error:', error);
-    res.status(500).json({ error: 'Failed to get API keys', code: 'KEYS_ERROR' });
-  }
-});
+  const genAI = google;
+  const generativeModel = genAI.getGenerativeModel({ model });
 
-app.post('/api/keys', authenticateApiKey, async (req, res) => {
-  try {
-    const { name, permissions } = req.body;
-    const newKey = await securityService.createApiKey(req.user.id, name, permissions);
-    res.json({ success: true, data: newKey });
-  } catch (error) {
-    logger.error('Create API key error:', error);
-    res.status(500).json({ error: 'Failed to create API key', code: 'KEY_CREATION_ERROR' });
-  }
-});
+  const result = await generativeModel.generateContent(fullPrompt);
+  const response = await result.response;
 
-// Error handling middleware
+  return response.text() || 'No response generated';
+}
+
+// Error handling
 app.use((error, req, res, next) => {
-  logger.error('Unhandled error:', error);
+  console.error('Unhandled error:', error);
   res.status(500).json({
     error: 'Internal server error',
-    code: 'INTERNAL_ERROR',
-    requestId: uuidv4()
+    message: error.message
   });
 });
 
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({
-    error: 'Endpoint not found',
-    code: 'NOT_FOUND'
+    error: 'Endpoint not found'
   });
 });
 
 // Start server
 app.listen(PORT, () => {
-  logger.info(`🚀 AI Assistant Pro Backend Service running on port ${PORT}`);
-  logger.info('🧠 Intelligence Engine: Initialized');
-  logger.info('🔧 Tools Service: Ready');
-  logger.info('📚 Knowledge Base: Loaded');
-  logger.info('🤔 Reasoning Engine: Active');
+  console.log(`🚀 AI Assistant Pro Backend running on port ${PORT}`);
+  console.log(`🌐 Health check: http://localhost:${PORT}/api/health`);
+  console.log(`🤖 OpenAI: ${openai ? '✅ Configured' : '❌ Not configured'}`);
+  console.log(`🧠 Anthropic: ${anthropic ? '✅ Configured' : '❌ Not configured'}`);
+  console.log(`⚡ Google AI: ${google ? '✅ Configured' : '❌ Not configured'}`);
 });
 
 module.exports = app;
-
