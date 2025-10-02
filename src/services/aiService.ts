@@ -63,24 +63,44 @@ class AIService {
     return [
       {
         name: 'OpenAI',
-        models: ['gpt-4', 'gpt-4-turbo', 'gpt-3.5-turbo'],
+        models: [
+          'gpt-4o', 
+          'gpt-4o-mini', 
+          'gpt-4-turbo', 
+          'gpt-4', 
+          'gpt-3.5-turbo',
+          'o1-preview',
+          'o1-mini'
+        ],
         isAvailable: !!this.openai,
         maxTokens: 128000,
         costPerToken: 0.00003
       },
       {
         name: 'Anthropic',
-        models: ['claude-3-opus', 'claude-3-sonnet', 'claude-3-haiku'],
+        models: [
+          'claude-3-5-sonnet-20241022',
+          'claude-3-5-haiku-20241022', 
+          'claude-3-opus-20240229',
+          'claude-3-sonnet-20240229', 
+          'claude-3-haiku-20240307'
+        ],
         isAvailable: !!this.anthropic,
         maxTokens: 200000,
         costPerToken: 0.000015
       },
       {
         name: 'Google',
-        models: ['gemini-pro', 'gemini-pro-vision'],
+        models: [
+          'gemini-2.0-flash-exp',
+          'gemini-1.5-pro-latest',
+          'gemini-1.5-flash-latest',
+          'gemini-pro-vision',
+          'gemini-ultra'
+        ],
         isAvailable: !!this.googleAI,
-        maxTokens: 32000,
-        costPerToken: 0.000001
+        maxTokens: 2000000,
+        costPerToken: 0.0000005
       }
     ]
   }

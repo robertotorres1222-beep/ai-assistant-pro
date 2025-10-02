@@ -16,7 +16,9 @@ import {
   MoreHorizontal,
   ChevronDown,
   X,
-  Check
+  Check,
+  Crown,
+  Star
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { aiService } from '../services/aiService'
@@ -44,22 +46,35 @@ export default function ModernAIChat({ className = '' }: ModernAIChatProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: `# Welcome to AI Assistant Pro ✨
+      content: `# 🚀 Welcome to AI Assistant Pro - The Future is Here!
 
-I'm your advanced AI assistant with cutting-edge capabilities:
+I'm powered by the **latest and most advanced AI models** available:
 
-🧠 **Advanced Reasoning** - Complex problem solving with multiple reasoning strategies
-🔧 **Tool Integration** - Execute code, search web, analyze files
-👁️ **Vision Capabilities** - Analyze and understand images
-🎨 **Creative Generation** - Create images, write code, design solutions
-📊 **Data Processing** - Handle documents, spreadsheets, and complex data
-🔒 **Enterprise Security** - Bank-level encryption and security
-💡 **Intelligent Context** - Learn and remember from our conversations
+## 🔥 **NEW & CUTTING-EDGE MODELS**
+- **GPT-4o** 🆕 - OpenAI's most advanced multimodal model
+- **o1-preview** 🧠 - Revolutionary reasoning model for complex problems  
+- **Claude 3.5 Sonnet** ⚡ - Anthropic's fastest and smartest model
+- **Gemini 2.0 Flash** 🌟 - Google's latest experimental model
 
-Ready to explore the future of AI assistance?`,
+## 💪 **Advanced Capabilities**
+🧠 **Superior Reasoning** - Complex problem solving with o1-preview
+🔧 **Tool Mastery** - Execute code, search web, analyze files
+👁️ **Vision Pro** - Advanced image analysis and understanding
+🎨 **Creative Genius** - Generate images, write code, design solutions
+📊 **Data Wizard** - Process documents, spreadsheets, complex data
+🔒 **Fort Knox Security** - Enterprise-grade encryption and protection
+💡 **Memory Palace** - Remember and learn from our conversations
+
+## 🎯 **Why Choose AI Assistant Pro?**
+✅ Access to **ALL** the latest AI models in one place
+✅ **Faster** than ChatGPT, **Smarter** than Claude
+✅ **No model switching** - I automatically choose the best model
+✅ **Free tier** available - try before you buy!
+
+Ready to experience the **next generation** of AI assistance? 🚀`,
       role: 'assistant',
       timestamp: new Date(),
-      model: 'GPT-4 Turbo',
+      model: 'GPT-4o',
       provider: 'OpenAI'
     }
   ])
@@ -75,6 +90,8 @@ Ready to explore the future of AI assistance?`,
   const [enableTools, setEnableTools] = useState(true)
   const [enableMemory, setEnableMemory] = useState(true)
   const [streamingEnabled, setStreamingEnabled] = useState(true)
+  const [showPricing, setShowPricing] = useState(false)
+  const [currentPlan, setCurrentPlan] = useState('free')
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -97,9 +114,30 @@ Ready to explore the future of AI assistance?`,
   }, [])
 
   const providers = [
-    { id: 'openai', name: 'OpenAI', icon: Brain, color: 'text-green-400', models: ['gpt-4', 'gpt-3.5-turbo'] },
-    { id: 'anthropic', name: 'Anthropic', icon: Sparkles, color: 'text-orange-400', models: ['claude-3-sonnet', 'claude-3-haiku'] },
-    { id: 'google', name: 'Google', icon: Zap, color: 'text-blue-400', models: ['gemini-pro', 'gemini-pro-vision'] }
+    { 
+      id: 'openai', 
+      name: 'OpenAI', 
+      icon: Brain, 
+      color: 'text-green-400', 
+      models: ['gpt-4o', 'gpt-4o-mini', 'o1-preview', 'o1-mini', 'gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo'],
+      badge: 'NEW'
+    },
+    { 
+      id: 'anthropic', 
+      name: 'Anthropic', 
+      icon: Sparkles, 
+      color: 'text-orange-400', 
+      models: ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307'],
+      badge: 'LATEST'
+    },
+    { 
+      id: 'google', 
+      name: 'Google', 
+      icon: Zap, 
+      color: 'text-blue-400', 
+      models: ['gemini-2.0-flash-exp', 'gemini-1.5-pro-latest', 'gemini-1.5-flash-latest', 'gemini-pro-vision', 'gemini-ultra'],
+      badge: 'HOT'
+    }
   ]
 
   const currentProvider = providers.find(p => p.id === selectedProvider)
@@ -218,6 +256,15 @@ Ready to explore the future of AI assistance?`,
         </div>
         
         <div className="flex items-center space-x-2">
+          {/* Pricing Button */}
+          <button
+            onClick={() => setShowPricing(true)}
+            className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 rounded-lg transition-all duration-200 transform hover:scale-105"
+          >
+            <Crown className="w-4 h-4 text-white" />
+            <span className="text-sm text-white font-medium">Upgrade</span>
+          </button>
+          
           {/* Provider Selector */}
           <div className="relative">
             <button
@@ -228,6 +275,11 @@ Ready to explore the future of AI assistance?`,
                 <>
                   <currentProvider.icon className={`w-4 h-4 ${currentProvider.color}`} />
                   <span className="text-sm text-white">{currentProvider.name}</span>
+                  {currentProvider.badge && (
+                    <span className="px-1.5 py-0.5 bg-orange-500 text-white text-xs rounded-full">
+                      {currentProvider.badge}
+                    </span>
+                  )}
                   <ChevronDown className="w-4 h-4 text-gray-400" />
                 </>
               )}
@@ -487,6 +539,169 @@ Ready to explore the future of AI assistance?`,
                       }`}
                     />
                   </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pricing Modal */}
+      {showPricing && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 overflow-y-auto">
+          <div className="min-h-screen p-4">
+            <div className="max-w-6xl mx-auto">
+              <div className="flex justify-end mb-4">
+                <button
+                  onClick={() => setShowPricing(false)}
+                  className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X className="w-6 h-6 text-white" />
+                </button>
+              </div>
+              
+              {/* Pricing Plans Content */}
+              <div className="bg-gradient-to-br from-gray-900 via-black to-gray-900 rounded-2xl p-8">
+                <div className="text-center mb-12">
+                  <h1 className="text-4xl font-bold text-white mb-4">
+                    Unlock <span className="text-gradient">Premium AI Models</span>
+                  </h1>
+                  <p className="text-xl text-gray-400">
+                    Get access to GPT-4o, Claude 3.5 Sonnet, o1-preview and more!
+                  </p>
+                </div>
+
+                <div className="grid md:grid-cols-3 gap-6">
+                  {/* Free Plan */}
+                  <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
+                    <div className="text-center mb-6">
+                      <Star className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                      <h3 className="text-xl font-bold text-white mb-2">Free</h3>
+                      <div className="text-3xl font-bold text-white mb-2">$0</div>
+                      <p className="text-gray-400 text-sm">20 messages/month</p>
+                    </div>
+                    <ul className="space-y-2 mb-6">
+                      <li className="flex items-center space-x-2">
+                        <Check className="w-4 h-4 text-green-400" />
+                        <span className="text-sm text-gray-300">GPT-3.5 Turbo</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <Check className="w-4 h-4 text-green-400" />
+                        <span className="text-sm text-gray-300">Claude 3 Haiku</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <Check className="w-4 h-4 text-green-400" />
+                        <span className="text-sm text-gray-300">Basic features</span>
+                      </li>
+                    </ul>
+                    <button 
+                      className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
+                        currentPlan === 'free' 
+                          ? 'bg-green-500/20 text-green-400 cursor-not-allowed' 
+                          : 'bg-white/10 hover:bg-white/20 text-white'
+                      }`}
+                      disabled={currentPlan === 'free'}
+                    >
+                      {currentPlan === 'free' ? 'Current Plan' : 'Choose Free'}
+                    </button>
+                  </div>
+
+                  {/* Pro Plan */}
+                  <div className="bg-white/5 backdrop-blur-xl border-2 border-blue-500/50 rounded-2xl p-6 relative">
+                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 px-4 py-1 bg-blue-500 text-white text-xs font-semibold rounded-full">
+                      Most Popular
+                    </div>
+                    <div className="text-center mb-6">
+                      <div className="w-12 h-12 mx-auto mb-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                        <Brain className="w-6 h-6 text-white" />
+                      </div>
+                      <h3 className="text-xl font-bold text-white mb-2">Pro</h3>
+                      <div className="text-3xl font-bold text-white mb-2">$20</div>
+                      <p className="text-gray-400 text-sm">1,000 messages/month</p>
+                    </div>
+                    <ul className="space-y-2 mb-6">
+                      <li className="flex items-center space-x-2">
+                        <Check className="w-4 h-4 text-green-400" />
+                        <span className="text-sm text-gray-300">GPT-4o</span>
+                        <span className="px-1.5 py-0.5 bg-green-500 text-white text-xs rounded-full">NEW</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <Check className="w-4 h-4 text-green-400" />
+                        <span className="text-sm text-gray-300">Claude 3.5 Sonnet</span>
+                        <span className="px-1.5 py-0.5 bg-orange-500 text-white text-xs rounded-full">LATEST</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <Check className="w-4 h-4 text-green-400" />
+                        <span className="text-sm text-gray-300">Advanced reasoning</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <Check className="w-4 h-4 text-green-400" />
+                        <span className="text-sm text-gray-300">Priority support</span>
+                      </li>
+                    </ul>
+                    <button className="w-full py-2 px-4 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-lg font-medium transition-all transform hover:scale-105">
+                      Upgrade to Pro
+                    </button>
+                  </div>
+
+                  {/* Enterprise Plan */}
+                  <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6">
+                    <div className="text-center mb-6">
+                      <div className="w-12 h-12 mx-auto mb-4 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl flex items-center justify-center">
+                        <Crown className="w-6 h-6 text-white" />
+                      </div>
+                      <h3 className="text-xl font-bold text-white mb-2">Enterprise</h3>
+                      <div className="text-3xl font-bold text-white mb-2">$100</div>
+                      <p className="text-gray-400 text-sm">Unlimited messages</p>
+                    </div>
+                    <ul className="space-y-2 mb-6">
+                      <li className="flex items-center space-x-2">
+                        <Check className="w-4 h-4 text-green-400" />
+                        <span className="text-sm text-gray-300">o1-preview</span>
+                        <span className="px-1.5 py-0.5 bg-purple-500 text-white text-xs rounded-full">PREMIUM</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <Check className="w-4 h-4 text-green-400" />
+                        <span className="text-sm text-gray-300">All AI models</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <Check className="w-4 h-4 text-green-400" />
+                        <span className="text-sm text-gray-300">API access</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <Check className="w-4 h-4 text-green-400" />
+                        <span className="text-sm text-gray-300">Custom deployment</span>
+                      </li>
+                    </ul>
+                    <button className="w-full py-2 px-4 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white rounded-lg font-medium transition-all transform hover:scale-105">
+                      Contact Sales
+                    </button>
+                  </div>
+                </div>
+
+                {/* Features Highlight */}
+                <div className="mt-12 text-center">
+                  <h2 className="text-2xl font-bold text-white mb-8">
+                    🚀 Latest AI Models Available
+                  </h2>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <div className="text-lg font-semibold text-white">GPT-4o</div>
+                      <div className="text-xs text-green-400">NEW</div>
+                    </div>
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <div className="text-lg font-semibold text-white">o1-preview</div>
+                      <div className="text-xs text-purple-400">REASONING</div>
+                    </div>
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <div className="text-lg font-semibold text-white">Claude 3.5</div>
+                      <div className="text-xs text-orange-400">LATEST</div>
+                    </div>
+                    <div className="bg-white/5 rounded-lg p-4">
+                      <div className="text-lg font-semibold text-white">Gemini 2.0</div>
+                      <div className="text-xs text-blue-400">HOT</div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
