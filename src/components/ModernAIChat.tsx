@@ -87,7 +87,7 @@ Ready to experience the **next generation** of AI assistance? 🚀`,
   const [securityEnabled, setSecurityEnabled] = useState(true)
   const [enableTools, setEnableTools] = useState(true)
   const [enableMemory, setEnableMemory] = useState(true)
-  const [streamingEnabled] = useState(true)
+  const [streamingEnabled, setStreamingEnabled] = useState(true)
   const [showPricing, setShowPricing] = useState(false)
   const [currentPlan] = useState('free')
   
@@ -527,6 +527,22 @@ Ready to experience the **next generation** of AI assistance? 🚀`,
                     <div
                       className={`w-4 h-4 bg-white rounded-full transition-transform ${
                         enableMemory ? 'translate-x-5' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-300">Streaming Response</span>
+                  <button
+                    onClick={() => setStreamingEnabled(!streamingEnabled)}
+                    className={`w-10 h-6 rounded-full transition-colors ${
+                      streamingEnabled ? 'bg-cyan-500' : 'bg-gray-600'
+                    }`}
+                  >
+                    <div
+                      className={`w-4 h-4 bg-white rounded-full transition-transform ${
+                        streamingEnabled ? 'translate-x-5' : 'translate-x-1'
                       }`}
                     />
                   </button>
