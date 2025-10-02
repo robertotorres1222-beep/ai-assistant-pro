@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
+import InterfaceSwitcher from './components/InterfaceSwitcher'
 import EnhancedCursorAI from './components/EnhancedCursorAI'
 import { initializeSecurity } from './utils/security'
 import { useEffect } from 'react'
@@ -15,8 +16,10 @@ function App() {
     <Router>
       <div className="App">
         <Routes>
-          <Route path="/" element={<EnhancedCursorAI />} />
-          <Route path="/chat" element={<EnhancedCursorAI />} />
+          <Route path="/" element={<InterfaceSwitcher className="h-screen" />} />
+          <Route path="/claude" element={<EnhancedCursorAI />} />
+          <Route path="/cursor" element={<EnhancedCursorAI />} />
+          <Route path="/chat" element={<InterfaceSwitcher className="h-screen" />} />
         </Routes>
         <Toaster 
           position="top-right"
