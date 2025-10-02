@@ -2,12 +2,9 @@ import React, { useState } from 'react'
 import { 
   Check, 
   X, 
-  Crown, 
   Zap, 
-  Sparkles, 
   Brain, 
   Shield, 
-  Infinity,
   Star,
   Rocket,
   Diamond

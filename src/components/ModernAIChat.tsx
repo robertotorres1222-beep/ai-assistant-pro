@@ -8,12 +8,10 @@ import {
   Sparkles, 
   Brain, 
   Zap, 
-  Shield, 
-  Eye,
+  Shield,
   Code,
   Image as ImageIcon,
   FileText,
-  MoreHorizontal,
   ChevronDown,
   X,
   Check,
@@ -89,9 +87,9 @@ Ready to experience the **next generation** of AI assistance? 🚀`,
   const [securityEnabled, setSecurityEnabled] = useState(true)
   const [enableTools, setEnableTools] = useState(true)
   const [enableMemory, setEnableMemory] = useState(true)
-  const [streamingEnabled, setStreamingEnabled] = useState(true)
+  const [streamingEnabled] = useState(true)
   const [showPricing, setShowPricing] = useState(false)
-  const [currentPlan, setCurrentPlan] = useState('free')
+  const [currentPlan] = useState('free')
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -177,14 +175,7 @@ Ready to experience the **next generation** of AI assistance? 🚀`,
       }))
       aiMessages.push({ role: 'user', content: userMessage.content })
 
-      const response = await aiService.chat(aiMessages, {
-        provider: selectedProvider,
-        model: selectedModel,
-        apiKey,
-        stream: streamingEnabled,
-        tools: enableTools,
-        memory: enableMemory
-      })
+      const response = await aiService.chat(aiMessages, selectedModel)
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
