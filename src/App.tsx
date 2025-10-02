@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
-import ModernAIChat from './components/ModernAIChat'
+import CursorAIInterface from './components/CursorAIInterface'
 import { initializeSecurity } from './utils/security'
 import { useEffect } from 'react'
 import './App.css'
@@ -15,19 +15,19 @@ function App() {
     <Router>
       <div className="App">
         <Routes>
-          <Route path="/" element={<ModernAIChat />} />
-          <Route path="/chat" element={<ModernAIChat />} />
+          <Route path="/" element={<CursorAIInterface />} />
+          <Route path="/chat" element={<CursorAIInterface />} />
         </Routes>
         <Toaster 
-          position="top-center"
+          position="top-right"
           toastOptions={{
             duration: 3000,
             style: {
-              background: 'rgba(0, 0, 0, 0.8)',
-              color: '#fff',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '12px',
-              backdropFilter: 'blur(12px)',
+              background: '#fff',
+              color: '#374151',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
             },
             success: {
               iconTheme: {
