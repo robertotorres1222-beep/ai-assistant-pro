@@ -47,7 +47,7 @@ export default function AISettings({ onClose }: AISettingsProps) {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-white">AI API Configuration</h2>
+          <h2 className="text-xl font-bold text-white">Kursa API Configuration</h2>
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
