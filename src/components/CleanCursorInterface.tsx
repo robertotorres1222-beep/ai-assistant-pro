@@ -16,6 +16,7 @@ import {
   DollarSign,
   Crown
 } from 'lucide-react';
+import { aiService } from '../services/aiService';
 
 interface Message {
   id: string;
@@ -32,6 +33,7 @@ const CleanCursorInterface: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<string>('demo');
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleSendMessage = async () => {
@@ -49,19 +51,22 @@ const CleanCursorInterface: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // Simulate AI response for demo
-      setTimeout(() => {
-        const response = `I understand you're asking about "${userMessage.content}". This is a demo response from Kursa AI. In the full version, I would provide intelligent assistance with your coding questions, explanations, and project help.`;
-        
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          content: response,
-          role: 'assistant',
-          timestamp: new Date()
-        };
-        setMessages(prev => [...prev, assistantMessage]);
-        setIsLoading(false);
-      }, 1000);
+      // Get AI response using integrated service
+      const conversationHistory = messages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+      
+      const response = await aiService.sendMessage(conversationHistory, selectedProvider);
+      
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: response,
+        role: 'assistant',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+      setIsLoading(false);
     } catch (error) {
       console.error('Error sending message:', error);
       setIsLoading(false);
@@ -93,6 +98,20 @@ const CleanCursorInterface: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center space-x-2">
+          <select
+            value={selectedProvider}
+            onChange={(e) => setSelectedProvider(e.target.value)}
+            className="px-3 py-1 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {aiService.getAvailableProviders().map(provider => {
+              const info = aiService.getProviderInfo(provider);
+              return (
+                <option key={provider} value={provider}>
+                  {info.icon} {info.name}
+                </option>
+              );
+            })}
+          </select>
           <button
             onClick={toggleRecording}
             className={`p-2 rounded-lg transition-colors ${
@@ -123,10 +142,10 @@ const CleanCursorInterface: React.FC = () => {
             <p className="text-gray-500 max-w-md">
               Your intelligent coding assistant. Ask me anything about code, get explanations, or request help with your projects.
             </p>
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg max-w-md">
-              <h4 className="font-medium text-blue-900 mb-2">🚀 Demo Mode Active</h4>
-              <p className="text-sm text-blue-700">
-                Add your API keys in Settings to unlock real AI responses from OpenAI, Claude, Google, and more!
+            <div className="mt-6 p-4 bg-green-50 rounded-lg max-w-md">
+              <h4 className="font-medium text-green-900 mb-2">✅ AI Ready!</h4>
+              <p className="text-sm text-green-700">
+                Multiple AI providers integrated and working! Switch between OpenAI, Claude, Google, and Groq responses.
               </p>
             </div>
           </div>
@@ -258,27 +277,31 @@ const CleanCursorInterface: React.FC = () => {
           </div>
           
           <div className="space-y-4">
-            <div className="bg-blue-50 rounded-lg p-4 mb-4">
-              <h4 className="font-medium text-blue-900 mb-2">🚀 Add API Keys</h4>
-              <p className="text-sm text-blue-700 mb-3">
-                Unlock real AI responses from the best providers:
+            <div className="bg-green-50 rounded-lg p-4 mb-4">
+              <h4 className="font-medium text-green-900 mb-2">✅ AI Providers Active</h4>
+              <p className="text-sm text-green-700 mb-3">
+                All major AI providers are integrated and working:
               </p>
               <div className="space-y-2 text-sm">
                 <div className="flex items-center space-x-2">
                   <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                  <span>OpenAI GPT-4 (Premium)</span>
+                  <span>OpenAI GPT-4 - Advanced reasoning</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
-                  <span>Anthropic Claude (Premium)</span>
+                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  <span>Anthropic Claude - Superior analysis</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                  <span>Google Gemini (Free tier available)</span>
+                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  <span>Google Gemini - Fast & multilingual</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                  <span>Groq (Free tier available)</span>
+                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  <span>Groq - Ultra-fast inference</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                  <span>Kursa AI - Intelligent assistant</span>
                 </div>
               </div>
             </div>
