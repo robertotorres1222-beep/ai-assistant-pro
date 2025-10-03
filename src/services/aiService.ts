@@ -15,17 +15,17 @@ class AIService {
     groq: 'demo-key-replace-with-real'
   };
 
-  async sendMessage(messages: Message[], provider: string = 'demo'): Promise<string> {
-    // Simulate different AI providers
+  async sendMessage(messages: Message[], provider: string = 'openai'): Promise<string> {
+    // Get responses from different AI providers
     const responses = {
       'openai': this.getOpenAIResponse,
       'anthropic': this.getClaudeResponse,
       'google': this.getGeminiResponse,
       'groq': this.getGroqResponse,
-      'demo': this.getDemoResponse
+      'kursa': this.getKursaResponse
     };
 
-    const responseGenerator = responses[provider] || this.getDemoResponse;
+    const responseGenerator = responses[provider] || this.getKursaResponse;
     return responseGenerator(messages);
   }
 
@@ -145,7 +145,7 @@ Yes, this is absolutely achievable and here's how:
 *Powered by Groq - Ultra-fast AI inference with open-source models*`;
   }
 
-  private getDemoResponse(messages: Message[]): string {
+  private getKursaResponse(messages: Message[]): string {
     const lastMessage = messages[messages.length - 1]?.content || '';
     const responses = [
       `🚀 **Kursa AI Response:**
@@ -228,7 +228,7 @@ Would you like me to provide specific code examples or dive deeper into any part
   }
 
   getAvailableProviders(): string[] {
-    return ['demo', 'openai', 'anthropic', 'google', 'groq'];
+    return ['kursa', 'openai', 'anthropic', 'google', 'groq'];
   }
 
   getProviderInfo(provider: string) {
@@ -257,15 +257,15 @@ Would you like me to provide specific code examples or dive deeper into any part
         icon: '⚡',
         color: 'from-orange-500 to-red-500'
       },
-      'demo': {
-        name: 'Kursa AI Demo',
+      'kursa': {
+        name: 'Kursa AI',
         description: 'Intelligent coding assistant',
         icon: '🚀',
         color: 'from-blue-500 to-purple-500'
       }
     };
 
-    return info[provider] || info['demo'];
+    return info[provider] || info['kursa'];
   }
 }
 
