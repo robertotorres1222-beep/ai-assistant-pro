@@ -1,10 +1,10 @@
-import DashAI from './components/DashAI'
+import CleanCursorInterface from './components/CleanCursorInterface'
 import './App.css'
 
 function App() {
   return (
     <div className="App">
-      <DashAI />
+      <CleanCursorInterface />
     </div>
   )
 }
