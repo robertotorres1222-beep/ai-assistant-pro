@@ -223,7 +223,7 @@ export default function RealAIChat({ className = '', title, description, provide
       </div>
 
       {/* Settings Modal */}
-      <AISettings isOpen={showSettings} onClose={() => setShowSettings(false)} />
+      {showSettings && <AISettings onClose={() => setShowSettings(false)} />}
     </div>
   )
 }

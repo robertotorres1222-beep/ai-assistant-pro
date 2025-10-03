@@ -57,6 +57,7 @@ export class RealAIService {
   private openaiApiKey: string | null = null
   private anthropicApiKey: string | null = null
   private googleApiKey: string | null = null
+  private currentModel: string = 'gpt-4o'
 
   constructor() {
     this.loadApiKeys()

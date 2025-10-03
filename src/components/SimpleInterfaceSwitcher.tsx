@@ -1,4 +1,3 @@
-import React from 'react'
 import { Code, MessageSquare, Brain, Bot, Zap } from 'lucide-react'
 
 interface InterfaceSwitcherProps {

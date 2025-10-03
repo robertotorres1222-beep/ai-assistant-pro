@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { X, Key, Save, Eye, EyeOff } from 'lucide-react'
 import { useBackendAIService } from '../services/backendAIService'
 import toast from 'react-hot-toast'
