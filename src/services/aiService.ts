@@ -31,197 +31,114 @@ class AIService {
 
   private getOpenAIResponse(messages: Message[]): string {
     const lastMessage = messages[messages.length - 1]?.content || '';
-    return `🤖 **OpenAI GPT-4 Response:**
+    return `I understand you're asking about "${lastMessage}". Here's my analysis:
 
-I understand you're asking about "${lastMessage}". Here's my analysis:
+This is a comprehensive topic that requires careful consideration. I can provide detailed insights and practical solutions. Let me break this down into actionable steps.
 
-**Key Points:**
-• This is a comprehensive topic that requires careful consideration
-• I can provide detailed insights and practical solutions
-• Let me break this down into actionable steps
-
-**Recommendations:**
+My recommendations:
 1. Start with the fundamentals
-2. Build upon your existing knowledge
+2. Build upon your existing knowledge  
 3. Apply best practices for optimal results
 
-**Next Steps:**
-Would you like me to elaborate on any specific aspect of your question?
-
-*Powered by OpenAI GPT-4 - Advanced reasoning and code generation capabilities*`;
+Would you like me to elaborate on any specific aspect of your question?`;
   }
 
   private getClaudeResponse(messages: Message[]): string {
     const lastMessage = messages[messages.length - 1]?.content || '';
-    return `🧠 **Claude 3.5 Sonnet Response:**
+    return `Thank you for your question about "${lastMessage}". I'll provide a thorough analysis:
 
-Thank you for your question about "${lastMessage}". I'll provide a thorough analysis:
-
-**Analysis:**
 This is an excellent question that demonstrates thoughtful consideration. Let me offer a comprehensive perspective that addresses both the immediate needs and long-term implications.
 
-**Detailed Breakdown:**
-1. **Understanding the Context**: First, let's establish the foundational concepts
-2. **Exploring Solutions**: Multiple approaches can be considered here
-3. **Implementation Strategy**: Practical steps for moving forward
-4. **Quality Assurance**: Ensuring reliability and effectiveness
+Here's my detailed breakdown:
+1. Understanding the Context: First, let's establish the foundational concepts
+2. Exploring Solutions: Multiple approaches can be considered here
+3. Implementation Strategy: Practical steps for moving forward
+4. Quality Assurance: Ensuring reliability and effectiveness
 
-**Additional Considerations:**
-• Potential challenges and how to address them
-• Best practices from industry experience
-• Scalability and future-proofing considerations
+Additional considerations include potential challenges and how to address them, best practices from industry experience, and scalability and future-proofing considerations.
 
-**Supporting Evidence:**
-Based on current best practices and established methodologies, this approach has proven effective in similar contexts.
-
-*Powered by Anthropic Claude - Superior analysis and writing capabilities*`;
+Based on current best practices and established methodologies, this approach has proven effective in similar contexts.`;
   }
 
   private getGeminiResponse(messages: Message[]): string {
     const lastMessage = messages[messages.length - 1]?.content || '';
-    return `💎 **Google Gemini Pro Response:**
+    return `Regarding your query about "${lastMessage}", here's what I found:
 
-Regarding your query about "${lastMessage}", here's what I found:
-
-**Quick Answer:**
 This is a well-structured question that I can address comprehensively.
 
-**Key Insights:**
-🔍 **Analysis**: The topic involves multiple interconnected elements
-⚡ **Speed**: Fast and efficient solutions are available
-🌍 **Global**: Applicable across different contexts and languages
+Key insights:
+- Analysis: The topic involves multiple interconnected elements
+- Speed: Fast and efficient solutions are available
+- Global: Applicable across different contexts and languages
 
-**Technical Details:**
-• Performance optimization strategies
-• Cost-effective implementation approaches
-• Scalable architecture recommendations
+Technical details include performance optimization strategies, cost-effective implementation approaches, and scalable architecture recommendations.
 
-**Practical Implementation:**
-1. **Setup**: Quick configuration steps
-2. **Configuration**: Optimal settings for your use case
-3. **Testing**: Validation and quality assurance
-4. **Deployment**: Production-ready implementation
+For practical implementation:
+1. Setup: Quick configuration steps
+2. Configuration: Optimal settings for your use case
+3. Testing: Validation and quality assurance
+4. Deployment: Production-ready implementation
 
-**Additional Resources:**
-- Documentation and guides
-- Community support channels
-- Best practices and examples
-
-*Powered by Google Gemini - Fast, multilingual, and multimodal AI*`;
+Additional resources include documentation and guides, community support channels, and best practices and examples.`;
   }
 
   private getGroqResponse(messages: Message[]): string {
     const lastMessage = messages[messages.length - 1]?.content || '';
-    return `⚡ **Groq Ultra-Fast Response:**
+    return `Quick response to "${lastMessage}":
 
-Quick response to "${lastMessage}":
-
-**Immediate Answer:**
 Yes, this is absolutely achievable and here's how:
 
-**Fast Implementation:**
-🚀 **Speed**: Ultra-fast processing with minimal latency
-💡 **Efficiency**: Optimized for real-time applications
-🔧 **Integration**: Easy to implement and scale
+Fast implementation with ultra-fast processing and minimal latency, optimized for real-time applications with easy integration and scaling.
 
-**Technical Specs:**
-• Sub-second response times
-• High throughput capabilities
-• Open-source model support
-• Cost-effective pricing
+Technical specs include sub-second response times, high throughput capabilities, open-source model support, and cost-effective pricing.
 
-**Implementation Steps:**
-1. **Setup** (30 seconds)
-2. **Configure** (1 minute)
-3. **Deploy** (2 minutes)
-4. **Test** (1 minute)
+Implementation steps:
+1. Setup (30 seconds)
+2. Configure (1 minute)
+3. Deploy (2 minutes)
+4. Test (1 minute)
 
-**Performance Benefits:**
-- 10x faster than traditional APIs
-- Lower computational costs
-- Better resource utilization
-- Enhanced user experience
-
-*Powered by Groq - Ultra-fast AI inference with open-source models*`;
+Performance benefits include 10x faster than traditional APIs, lower computational costs, better resource utilization, and enhanced user experience.`;
   }
 
   private getKursaResponse(messages: Message[]): string {
     const lastMessage = messages[messages.length - 1]?.content || '';
     const responses = [
-      `🚀 **Kursa AI Response:**
+      `I understand you're asking about "${lastMessage}". This is a great question!
 
-I understand you're asking about "${lastMessage}". This is a great question!
+Here's what I can help you with:
+- Code generation and debugging
+- Technical explanations and tutorials
+- Project planning and architecture
+- Problem-solving and optimization
 
-**Here's what I can help you with:**
-• Code generation and debugging
-• Technical explanations and tutorials
-• Project planning and architecture
-• Problem-solving and optimization
+My capabilities include advanced reasoning and analysis, code writing in multiple languages, creative problem solving, and research and documentation.
 
-**My capabilities include:**
-✅ Advanced reasoning and analysis
-✅ Code writing in multiple languages
-✅ Creative problem solving
-✅ Research and documentation
+Ready to assist with web development (React, Node.js, Python), AI and machine learning projects, database design and optimization, and system architecture and deployment.`,
 
-**Ready to assist with:**
-- Web development (React, Node.js, Python)
-- AI and machine learning projects
-- Database design and optimization
-- System architecture and deployment
+      `Your question about "${lastMessage}" is excellent! Let me break this down:
 
-*Powered by Kursa AI - Your intelligent coding assistant*`,
-
-      `🎯 **Smart Analysis:**
-
-Your question about "${lastMessage}" is excellent! Let me break this down:
-
-**Understanding Your Needs:**
 I can see you're looking for comprehensive solutions. Here's my approach:
 
-**Step-by-Step Solution:**
-1. **Assessment**: Understanding the current situation
-2. **Planning**: Creating an effective strategy
-3. **Implementation**: Executing with best practices
-4. **Optimization**: Ensuring peak performance
+Step-by-step solution:
+1. Assessment: Understanding the current situation
+2. Planning: Creating an effective strategy
+3. Implementation: Executing with best practices
+4. Optimization: Ensuring peak performance
 
-**Key Benefits:**
-• Faster development cycles
-• Higher code quality
-• Better maintainability
-• Improved user experience
+Key benefits include faster development cycles, higher code quality, better maintainability, and improved user experience.
 
-**Additional Support:**
-- Code reviews and improvements
-- Performance optimization
-- Security best practices
-- Documentation and testing
+Additional support includes code reviews and improvements, performance optimization, security best practices, and documentation and testing.`,
 
-*Kursa AI - Advanced development assistance*`,
+      `Regarding "${lastMessage}", here's my comprehensive analysis:
 
-      `💡 **Intelligent Response:**
-
-Regarding "${lastMessage}", here's my comprehensive analysis:
-
-**Core Concept:**
 This involves understanding fundamental principles and applying them effectively.
 
-**Technical Approach:**
-🔧 **Implementation**: Practical, production-ready solutions
-📊 **Analysis**: Data-driven decision making
-🎨 **Design**: User-friendly and scalable architecture
-🚀 **Performance**: Optimized for speed and efficiency
+Technical approach includes practical, production-ready solutions, data-driven decision making, user-friendly and scalable architecture, and optimized performance.
 
-**Best Practices:**
-• Clean, maintainable code
-• Proper error handling
-• Security considerations
-• Scalability planning
+Best practices include clean, maintainable code, proper error handling, security considerations, and scalability planning.
 
-**Next Steps:**
-Would you like me to provide specific code examples or dive deeper into any particular aspect?
-
-*Kursa AI - Your development partner*`
+Would you like me to provide specific code examples or dive deeper into any particular aspect?`
     ];
 
     return responses[Math.floor(Math.random() * responses.length)];
